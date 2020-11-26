@@ -1159,7 +1159,7 @@ C      open(7010,FILE='bladevars.s12s1')
       GAU=GB(1)*9.81      
       GAR=GB(4)           ! 在第一级工作轮进口处的气流角
       GAN(LAR)=COD(GAU,0,GB(2),2,5)
-   58 UK1=UKZ*A(1,II)/A(1,IIS)    ! 工作轮前缘圆周相对速度
+      UK1=UKZ*A(1,II)/A(1,IIS)    ! 工作轮前缘圆周相对速度
       FORM1=ALF(I)        ! 出口气流角
       FORM2=SIG(I)        ! 级后总压恢复系数
       DO K=1,20
@@ -1212,6 +1212,7 @@ C      open(7010,FILE='bladevars.s12s1')
       HQCK=0
       HQC=0
       IF(I.LE.IIS) THEN
+          ! 第一级压气机的参数处理
           AAAA=ALFA1
           QL1=AN(M,2)
           D=SQRT(AK*(2./(AK+1.))**((AK+1.)/(AK-1.)))
@@ -1219,7 +1220,6 @@ C      open(7010,FILE='bladevars.s12s1')
           F1=3.1415*DK1**2*(1.-DDK1**2)*0.000001/4.
           G=D*F1*PPP*QL1*SIN(AAAA)/SQRT(TTT)          ! 流量计算公式
           IF(AKGK.GT.1E-2) G=G*AKGK
-          ! 级间抽气（未添加）
           GPP=G*10328.746/PPP*SQRT(TTT/288.)
       END IF
       IF(FORM1.GT.1E-6) GB(4)=FORM1
@@ -1228,15 +1228,13 @@ C      open(7010,FILE='bladevars.s12s1')
           GB(1)=GB(1)*FORM2
           STAGE(22)=STAGE(22)*FORM2
       ENDIF
-      IF(INDEX4.LT.1) THEN
-          IF(I.LE.IIS) THEN
-              DO L=1,24
-                  FX(L)=STAGE(L)
-                  ZC(1+L/7)=C(1+L/7)
-              END DO
-              W1=DSITAK
-              W2=DSITAA
-          ENDIF
+      IF(INDEX4.LT.1.AND.I.LE.IIS) THEN
+          DO L=1,24
+              FX(L)=STAGE(L)
+              ZC(1+L/7)=C(1+L/7)
+          END DO
+          W1=DSITAK
+          W2=DSITAA
       ENDIF
       GB(4)=GB(4)*PA
       IF(IPES.EQ.II) THEN
@@ -1268,9 +1266,10 @@ C      open(7010,FILE='bladevars.s12s1')
       CN=AN(M,1)*GB(3)*SQRT(288/TT1)                  ! 换算转速？
       STEQ1=PPI
       IF(ABS(STEQ1-STEQ2).LT.1E-5) THEN
-        ISTEQ=ISTEQ+1
-        IF(IPE4.NE.0) THEN
-        END IF
+          ISTEQ=ISTEQ+1
+          IF(IPE4.NE.0) THEN
+              ! 可能有一些输出参数
+          END IF
       END IF
       STEQ2=PPI
       IF(ISTEQ.EQ.5) THEN
@@ -1296,6 +1295,7 @@ C      open(7010,FILE='bladevars.s12s1')
               STORE(LI)=STUP(LJ)
           END DO
       ENDIF
+      ! 是否打印一些输出信息
       IF(IPE4.NE.0) THEN
           IF(NG.EQ.1) then
               WRITE(7,117)BN,CN
@@ -1481,7 +1481,7 @@ C      open(7010,FILE='bladevars.s12s1')
       ! KSTEP 步骤说明
       ! ---   1:  805 STEPON
       ! ---   2:  10  重新开始级循环
-      GO TO (805,10),KSTEP                    ! 805：STEPON；10：重新开始级循环
+      GO TO (805,10),KSTEP
   805 CALL STEPON(M,IQP,IQ,IDQC,INDEXQ,INDEX2,INDEX4,INDEX6,INDEX7,
      *IPE4,GB,AN,DELTQ,PP,QL1,AKPX,QH,QGP,PGP,QQS,QQF,IM,
      *KM,INDEX8,IND8R,INDEXB,KSTEP,BRANCH,POINTS)
