@@ -875,7 +875,7 @@ C      open(7010,FILE='bladevars.s12s1')
       COMMON/A42/ALF4C
       ! A42
       ! ---   ALF4C   ???
-      COMMON/BIS/BIS
+      COMMON/BIS/BIS(30)
       ! BIS
       ! ---   BIS     级间抽气流量或百分比
       COMMON/C1/III,INDEXC,HQKP,HQKPA
@@ -918,6 +918,7 @@ C      open(7010,FILE='bladevars.s12s1')
   194 FORMAT(5X,'级号',I2)
   193 FORMAT(8X,'工作叶轮')
   192 FORMAT(8X,'导向器')
+  191 FORMAT(8X,'抽气百分比',8X,F13.6)
   190 FORMAT(8X,'计算范围')
   189 FORMAT(8X,'进口参数')
       ALF4C=IWRITE            !记录数组符号
@@ -943,9 +944,10 @@ C      open(7010,FILE='bladevars.s12s1')
       NTB=NP
       IKBD=IBD
       IF(IKBD.EQ.0) IKBD=1000
+      ! 输出轮缘结构参数
       IF(IPE4.EQ.1) THEN
           WRITE(7,196)NOWNV
-          WRITE(7,195)    ! 打印：轮缘结构参数
+          WRITE(7,195)
           DO L=IIS,IIF
               WRITE(7,194) L
               WRITE(7,193)
@@ -953,6 +955,7 @@ C      open(7010,FILE='bladevars.s12s1')
               WRITE(7,192)
               WRITE(7,71)(B(J,L),J=1,20)      ! 输出各级导向器环圈结构参数
               WRITE(7,71)(GKA(J,L),J=1,4)     ! 输出校正系数
+              WRITE(7,191)BIS(L)
           END DO
           WRITE(7,190)    ! 打印：计算范围
           DO L=NNS,NNF
@@ -1376,8 +1379,8 @@ C      open(7010,FILE='bladevars.s12s1')
           END IF
       ENDIF
       GAN(1)=AN(M,1)  ! 转速百分比
-      GAN(2)=GPP      ! GPP???
-      GAN(3)=QL1      ! 流量系数???
+      GAN(2)=GPP      ! 流量
+      GAN(3)=QL1      ! 流量系数
       GAN(4)=PP       ! PP???
       GAN(5)=AKPX     ! 等熵效率
       GAU=GB(1)*9.81  ! 总压x9.81
