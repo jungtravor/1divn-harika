@@ -1178,8 +1178,9 @@ C      open(7010,FILE='bladevars.s12s1')
       HA(6)=HA(6)/PA
       RK(16)=RK(16)/PA
       HA(16)=HA(16)/PA
+      ! 速度足够小的时候忽略叶型尖角的影响
       IF(UKM.LE.150.AND.RK(16).NE.0.) THEN
-          RK(10)=0   !!!!!!!!!!!!!!
+          RK(10)=0
           RK(16)=0.
       END IF
       IF((INDEX4.LE.0).OR.(I.GT.IIS)) THEN
@@ -1216,7 +1217,7 @@ C      open(7010,FILE='bladevars.s12s1')
       QLA1C=0
       HQCK=0
       HQC=0
-      IF(I.LE.IIS) THEN
+      IF(I.EQ.IIS) THEN
           ! 压气机第一级的参数处理
           AAAA=ALFA1
           QL1=AN(M,2)
@@ -1229,11 +1230,12 @@ C      open(7010,FILE='bladevars.s12s1')
       END IF
       IF(FORM1.GT.1E-6) GB(4)=FORM1
       IF(ALF(1).GT.1E5) GB(4)=HAI(2)
+      ! 级后总压恢复系数对气体总压和压比的影响
       IF(FORM2.GT.0.000001) THEN
           GB(1)=GB(1)*FORM2
           STAGE(22)=STAGE(22)*FORM2
       ENDIF
-      IF(INDEX4.LT.1.AND.I.LE.IIS) THEN
+      IF(INDEX4.LT.1.AND.I.EQ.IIS) THEN
           DO L=1,24
               FX(L)=STAGE(L)
               ZC(1+L/7)=C(1+L/7)
@@ -4062,11 +4064,11 @@ c子午流道
     2 IF(RK(16))10,11,10
    10 XX=1.
     6 XC=0.455/(C2C1*RK(2)/RK(1)-0.545)
-      GOTO7
+      GOTO 7
    11 XX=1.1
       IF(RK(3)-0.4)3,3,4    !RK(3)相对轮毂直径，即轮毂比
     3 XC=1.
-      GOTO7
+      GOTO 7
     4 IF(RK(3)-0.75)5,5,6
     5 XC=1.3*(RK(3)-0.4)/(C2C1*RK(2)/RK(1)-0.545)-2.86*RK(3)+2.145
     7 IF(B20-60.)13,14,14
@@ -4346,10 +4348,11 @@ C      common/add/jicanshu
       C1A=AL1*AKR*SIN(ALFA1)/UK1                          !入口处速度系数
       HQ=C1A/C1AO
       ! 输出该级参数
-  700 FORMAT(8X,i,4X,4F14.6)
-  701 FORMAT(4X,2HII,4X,2HT1,4X,2HP1,4X,5HALFA1,4X,4HQLA1)
+  700 FORMAT(4X,I2,4X,5F14.6)
+  701 FORMAT(4X,2HII,12X,2HT1,12X,2HP1,12X,5HALFA1,8X,4HQLA1,8X,3HQLA)
       IF(II.EQ.1) WRITE(7,701)
-      WRITE(7,700)II,AT1,PPI,ALFA1,QLA1
+      WRITE(7,700)II,AT1,PPI,ALFA1,QLA1,QLA
+      !!
       CALL CRITIC(II,HQ,QLA1,C1AO,B2O,HTO,ADST,KAG,HAG,RE,UPR2,M,
      *RK,HA,RKI,HAI,STAGE,AN,GB,GKA,
      *INDEX2,INDEX3,C1U,C2A,BETA1,BETA2,ALFA2,LA2,AT2,
@@ -6210,7 +6213,7 @@ C      IF(jicanshu.EQ.0) RETURN
       RETURN
       END
       SUBROUTINE POINT(RK,HA,GK,GB,GDK,
-     *GDA,HAI,RKI,STAGE,II,INDEX1,OPTIMS,M)       ! 
+     *GDA,HAI,RKI,STAGE,II,INDEX1,OPTIMS,M)
       DIMENSION OPTIMS(10)
        DIMENSION RK(20),HA(20),GK(4),GB(10),GDK(6,30),
      *GDA(6,30),STAGE(24),RKI(10),HAI(10),RIB(4)
@@ -6259,24 +6262,44 @@ C      IF(jicanshu.EQ.0) RETURN
       GOTO7
     6 B20=RKI(2)
       A40=HAI(2)
+      ! 计算落后角及出口相对气流角：DELTAK
+      ! - RK      级结构参数
+      ! - GK      修正参数数组
+      ! - J       迭代次数
+      ! - E       叶形弯角
+      ! - C2C1    工作轮前后绝对速度与周向速度的比值
+      ! - B20     最佳出口相对气流角
+      ! - DELT    计算结果：落后角
+      ! - BETA2   计算结果：出口相对气流角
     7 CALL DELTAK(RK,GK,J,EK,C2C1,B20,DELTK,BETA2)    ! 转子落后角计算
       RKI(2)=BETA2
       CALL DELTAK(HA,GK,J,EA,C4C2,A40,DELTA,ALFA4)    ! 静子落后角计算
       HAI(2)=ALFA4
+      ! 计算最佳入口攻角：AI0
+      ! - RK      级结构参数
+      ! - DI      根据具体流动给出的攻角修正值
+      ! - BETA2   出口相对气流角
+      ! - AI0K    计算结果：最佳攻角
+      ! - BETA1   入口相对气流角
+      ! - FER     算法中第一次计算时经验给定为2，在后面各次的循环计算中给定为3
       IF(RK(16))3,8,3
     8 IF(J-2)9,9 ,11
     9 CONTINUE
       WY=0.
-      CALL AI0(RK,WY,BETA2,QIK,BETA1,2.)              ! 冲角
+      CALL AI0(RK,WY,BETA2,QIK,BETA1,2.)              ! 不带修正的工作轮入口攻角QIK
       QK=SPID(R1,BETA1,B1)
       IF(INDEX1-1)12,11,11         !????????
    11 DIK=RKI(8)
       CALL AI0(RK,DIK,BETA2,AI0K,BETA1,2.)
       RKI(4)=BETA1                !进口气流角
-   12 C1A0K=SPID(R1,BETA1,B1)     !转子最优点进口流量系数
-      GOTO40
-    3  CONTINUE
-      CALL BAHOB(RK,GDK,RIB,II)   ! 最大入口轴向相对速度的确定
+      ! 计算叶栅入口叶尖轴向相对速度：SPID
+      ! - R1      入口相对平均半径
+      ! - BETA1   入口相对气流角
+      ! - B1      入口绝对气流角
+   12 C1A0K=SPID(R1,BETA1,B1)             ! 工作轮入口叶尖轴向相对速度
+      GOTO 40
+    3 CONTINUE
+      CALL BAHOB(RK,GDK,RIB,II)
       C1AM=RIB(1)
       C1AKR=RIB(2)
       AI0K=RIB(3)
@@ -6286,7 +6309,7 @@ C      IF(jicanshu.EQ.0) RETURN
    41 CONTINUE
         US=0.
         YS=3.
-        CALL AI0(HA,US,ALFA4,QIA,ALFA3,YS)
+      CALL AI0(HA,US,ALFA4,QIA,ALFA3,YS)  ! 最佳入口攻角计算
       QA=SPID(R2,BETA2,ALFA3)
       IF(INDEX1-1)44,43,43
    43 DIA=HAI(8)
@@ -6319,6 +6342,14 @@ C      IF(jicanshu.EQ.0) RETURN
       IF(RK(16))45,46,45
    46 RKI(8)=ATAKA(RK,QIK,R1,QK,B1,AL10)    !级最优点速度系数对冲角修正
    45 HAI(8)=ATAKA(HA,QIA,R2,QA,BETA2,AL20)
+      ! 叶栅效率修正系数计算：OKPD
+      ! - RK      叶栅结构参数
+      ! - C1A0    入口最佳轴向相对速度
+      ! - C1A0K   最佳入口轴向相对速度
+      ! - AL10    入口气流速度系数
+      ! - ANWK    C1A0/C1A0K
+      ! - B1      计算结果：效率修正系数
+      ! - B1      公式计算中的修正系数
       CALL OKPD(RK,C1A0,C1A0K,AL10,ANWK,OK,FK)  !转子效率修正系数
       CALL OKPD(HA,C2A0,C2A0A,AL20,ANWA,OA,FA)
       RKI(9)=C1A0K
@@ -6327,7 +6358,7 @@ C      IF(jicanshu.EQ.0) RETURN
       HAI(7)=AL20
       AKPDA=AKPD(HA,AL20)      !静子效率              VTAC径向间隙对效率修正
       RKI(10)=((AKPDK*OK*TAW+AKPDA*OA*(1.-TAW))-HLIM)*GK(4)*VTAC !级最优效率
-      OC1A0=ONWK(RK,ANWK,ANWA,TAW,AKPDK,AKPDA,FK,FA) !级与转子最优点流量系数比
+      OC1A0=ONWK(RK,ANWK,ANWA,TAW,AKPDK,AKPDA,FK,FA)  ! 轴向相对速度修正系数
       C1A0=C1A0K*OC1A0    !级最优点流量系数
       IF(J.EQ.1)RKI(1)=C1A0
       IF(RK(16).EQ.0.) GO TO 26
@@ -6370,21 +6401,22 @@ C      IF(jicanshu.EQ.0) RETURN
       AMW=AMQ(T1)   !动力粘度
       RE=B*AP1*RK(8)*GL10*SIN(A1)/(AMW*SQRT(AT1)*SIN(BETA1)) !雷诺数
       IF(HA(17).LT.0.5) RE=1E6
-      IF(RE-3.5*10.**5)33,33,34
-   33 C1AO=RKI(1)
-      AKPDO=RKI(10)
-      HTO=HAI(10)
-      CALL REYNOL(RK,C1AO,AKPDO,HTO,R1,AM10,RE,C1AR,AKPDR,HTR)   !雷诺数影响
-      STAGE(1)=C1AR
-      STAGE(4)=AKPDR
-      STAGE(5)=HTR
-      STAGE(23)=C1AR/C1AO
-      GOTO35
-   34 STAGE(1)=RKI(1)
-      STAGE(4)=RKI(10)
-      STAGE(5)=HAI(10)
-      STAGE(23)=1.
-   35 STAGE(2)=HAI(2)
+      IF(RE.GT.3.5*10.**5) THEN
+          STAGE(1)=RKI(1)
+          STAGE(4)=RKI(10)
+          STAGE(5)=HAI(10)
+          STAGE(23)=1.
+      ELSE
+          C1AO=RKI(1)
+          AKPDO=RKI(10)
+          HTO=HAI(10)
+          CALL REYNOL(RK,C1AO,AKPDO,HTO,R1,AM10,RE,C1AR,AKPDR,HTR)   !雷诺数影响
+          STAGE(1)=C1AR
+          STAGE(4)=AKPDR
+          STAGE(5)=HTR
+          STAGE(23)=C1AR/C1AO
+      END IF
+      STAGE(2)=HAI(2)
       STAGE(3)=AT2
       STAGE(6)=AM10
       STAGE(7)=PI
