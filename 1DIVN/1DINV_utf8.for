@@ -4107,11 +4107,23 @@ c子午流道
       AL10=AL
       RETURN
       END
-      SUBROUTINE GEOM (PK,X,Y,GD,GAGT)        !确定叶轮几何参数
+      SUBROUTINE GEOM (PK,X,Y,GD,GAGT)
+      ! 叶栅通道喉部位置的确定
+      ! ---   PK      叶栅结构参数
+      ! ---   X       叶形X轴坐标
+      ! ---   Y       叶形Y轴坐标
+      ! ---   GD      计算结果
+      ! ------    GD(1)   气流折转角
+      ! ------    GD(2)   喉部面积
+      ! ------    GD(3)   叶栅进口处平均半径
+      ! ------    GD(4)   叶栅出口处平均半径
+      ! ------    GD(5)   叶栅进出口面积比
+      ! ------    GD(6)   进气角与叶型楔角一半的差（可能用于计算攻角损失）
+      ! ---   GAGT    喉部面积修正系数
       DIMENSION PK(20),X(16),Y(16),GD(6)
       YMAX=0.
       DO L=1,16
-        IF(Y(L).GT.YMAX) YMAX=Y(L)
+          IF(Y(L).GT.YMAX) YMAX=Y(L)
       END DO
       DK1=PK(1)           ! 叶栅进口外缘直径
       DK2=PK(2)           ! 叶栅出口外缘直径
@@ -4131,7 +4143,7 @@ c子午流道
       IF(AG2.NE.0) GO TO 50
       A=XF/(1.-XF)
       QE=0.5*(1./A+A)/TAN(E)   !?????
-      HI1=ATAN(1./(A*(QE+SQRT(1.+QE**2)))) !前缘角
+      HI1=ATAN(1./(A*(QE+SQRT(1.+QE**2))))    ! *** 前缘角 ***
       HI2=E-HI1   !后缘角
       V=E/2.
       KP=0        ! KP为0表示最大弯度在叶形中间
@@ -4174,7 +4186,7 @@ c子午流道
       YC2=X2*H*A*B/(H*B+X2*A)
    11 YHI2=ATAN(HI)
       AG=B1T*(SQRT((X1+COS(T)/B1T-X2)**2+(YC1+SIN(T)/B1T-YC2)**2)
-     *-Y1*COS(YHI1)-Y2*COS(YHI2))     ! 喉部相对面积
+     *-Y1*COS(YHI1)-Y2*COS(YHI2))     ! *** 喉部相对面积 ***
       IF(AG.LT.AG1) GO TO 14
       AGT=AG1          !叶栅喉道尺寸与步长之比
       GO TO 40
@@ -4323,7 +4335,7 @@ C      common/add/jicanshu
       F1=3.14159*DK1**2.*(1.-D1**2.)/4.   ! 流道面积
       AM=SQRT(AK*(2/(AK+1))**((AK+1)/(AK-1)))      !求流量系数K=AM/SQRT(R)
       IF(II.LE.IL) AA=AM*F1/SQRT(AT1)*SIN(ALFA1)
-      IF(II.GT.1) AA=AA*(1.-BIS(30))
+      ! IF(II.GT.1) AA=AA*(1.-BIS(30))      ! 级间抽气
       UK2=UK1*DK2/DK1
       UK4=UK1*DK4/DK1
       QLA=AN(M,2)         ! 流量系数
@@ -4349,11 +4361,10 @@ C      common/add/jicanshu
       PPI=STAGE(22)       ! 总压比
       ! 计算当前级速度及流量参数
       QLA1=QLA*AKG*AA*SQRT(AT1)/(AM*F1*PPI*SIN(ALFA1))    ! 级入口流量系数
-      WRITE(7,'(10X,4HQLA1,4X,F16.6)')QLA1
       AKR=SQRT(2*9.81*RRR*AT1*AK/(AK+1))                  ! 级入口处临界声速
       AL1=RLQMDA(QLA1)                                    ! 入口处无因次速度数
       C1A=AL1*AKR*SIN(ALFA1)/UK1                          !入口处速度系数
-      HQ=C1A/C1AO
+      HQ=C1A/C1AO                                         ! 入口处速度系数与最佳速度之比
       ! 计算临界参数
       CALL CRITIC(II,HQ,QLA1,C1AO,B2O,HTO,ADST,KAG,HAG,RE,UPR2,M,
      *RK,HA,RKI,HAI,STAGE,AN,GB,GKA,
@@ -4487,20 +4498,22 @@ C      common/add/jicanshu
       CALL YPPKC(HQ,C1AO,HTO,B2O,AML1,ADST,PIK,ALFA2,LA2,C2A,C2U,AT2,
      *II,RK,HA,RKI,HAI,STAGE,
      *AKP,XFK,XFA,UPR2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX)
-      IF(HQC.GT.0.) GO TO 2114
-      IF(RK(20).GT.1E-6) GO TO 1000   ! 输入参数中提供：RK(20)分离边界上的空气动力载荷判据值
-      CALL FGCA(ANT,RE,FGK,FGKA)      ! 计算分离判据
-      GO TO 1001
- 1000 FGK=RK(20)
-      FGKA=FGK*1.2
- 1001 IF(INDEX5.GT.0) RETURN
-       XXX=AK*RRR*9.81
-      HQCK=HQCP(C1AO,B2O,XXX,FGK)
-      CALL OGCC(HQ,HQCK,C1AO,HTO,B2O,AML1,ADST,FGKA,
-     *II,RK,HA,RKI,HAI,STAGE,
-     *AKP,XFK,XFA,UPR2,HQC,ALIN)
- 2114 IF(HQC-50.)2112,2112,2113       ! 到2113为计算分离区参数
- 2112 IF(KRAN(39).EQ.1) WRITE(7,9992)II,FGK,FGKA
+      IF(HQC.LE.0.) THEN
+          IF(RK(20).GT.1E-6) THEN         ! 输入参数中提供：RK(20)分离边界上的空气动力载荷判据值
+              FGK=RK(20)
+              FGKA=FGK*1.2
+          ELSE
+              CALL FGCA(ANT,RE,FGK,FGKA)  ! 计算分离判据
+          END IF
+          IF(INDEX5.GT.0) RETURN
+          XXX=AK*RRR*9.81
+          HQCK=HQCP(C1AO,B2O,XXX,FGK)
+          CALL OGCC(HQ,HQCK,C1AO,HTO,B2O,AML1,ADST,FGKA,
+     *    II,RK,HA,RKI,HAI,STAGE,
+     *    AKP,XFK,XFA,UPR2,HQC,ALIN)
+      END IF
+      IF(HQC.GT.50.) RETURN
+      IF(KRAN(39).EQ.1) WRITE(7,9992)II,FGK,FGKA
       IF(KRAN(39).EQ.1) WRITE(15,9992)II,FGK,FGKA
       CALL PHOY(HQC,UPR2,HTO,C1AO,B2O,H)
       HC=H*PHMK(AKP,XFK)
@@ -4514,15 +4527,11 @@ C      common/add/jicanshu
       AKPX=VTA*ADST
       C1AC=HQC*C1AO
       QLA1C=QQL(C1AC)
-      IF(KRAN(6).EQ.0) GO TO 2117
-      WRITE(7,933) HC,H,HT,VTAC,VTAT,AKPX
- 2117 CALL PPZPKC(HT,AKPX,QLA1,C1A,C2AOA,PIK,ALFA2,LA2,C2A,C2U,AT2,
+      IF(KRAN(6).NE.0) WRITE(7,933) HC,H,HT,VTAC,VTAT,AKPX
+      CALL PPZPKC(HT,AKPX,QLA1,C1A,C2AOA,PIK,ALFA2,LA2,C2A,C2U,AT2,
      *PI,PIT,ALFA4,LA4,C4A,II)
-      IF(KRAN(6).EQ.0) GO TO 2113
-      WRITE(7,933) HQ,C1A,PIK,ALFA2,LA2,C2A,
+      IF(KRAN(6).NE.0) WRITE(7,933) HQ,C1A,PIK,ALFA2,LA2,C2A,
      *C2U,AT2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX
- 2113 CONTINUE
-      RETURN
       END
       SUBROUTINE OGCC(HQ,HQCK,C1AO,HTO,B2O,AML1,ADST,FGKA,
      *II,RK,HA,RKI,HAI,STAGE,
@@ -4606,7 +4615,7 @@ C      common/add/jicanshu
       ! 转子出口参数计算
       SUBROUTINE PPZPKC(HT,AKPX,QLA1,C1A,C2AOA,
      *PIK,ALFA2,LA2,C2A,C2U,AT2,
-     *PI,PIT,ALFA4,LA4,C4A,II)       
+     *PI,PIT,ALFA4,LA4,C4A,II)
       REAL LA2,LA4,LA2A
       COMMON/A2/R1/A6/R2,DK1,DK2,DK4,DDK1,DDK2,DDK4
       COMMON/A7/UK1/A8/ALFA1
@@ -5978,8 +5987,9 @@ C      common/add/jicanshu
       RETURN
         END
       FUNCTION QQL(C1A)
+      ! 由入口轴向速度计算流量系数
       REAL LA1
-      COMMON/A15/AKR
+      COMMON/A15/AKR                  ! 临界声速
       COMMON/A7/UK1/A8/ALFA1/A13/AK
       LA1=(C1A*UK1)/(AKR*SIN(ALFA1))
       FF=(AK+1)/2.
@@ -5995,6 +6005,12 @@ C      common/add/jicanshu
       RETURN
       END
       SUBROUTINE AL1(C1A0,R1,B10S,AM10,AL10)
+      ! 转子入口气流的马赫数及速度系数的确定
+      ! ---   C1A0    入口轴向相对速度
+      ! ---   R1      入口相对平均半径
+      ! ---   B10S    入口相对气流角
+      ! ---   AM10    计算结果：入口气流马赫数
+      ! ---   AL10    计算结果：入口气流马赫数
       COMMON/A7/UK1/BLOK/AP1,A1,R,UKP/A13/AK
       COMMON/A9/RRR,AT1,UK2,UK4
       COMMON/T1/T1
@@ -6062,8 +6078,19 @@ C      common/add/jicanshu
      *RWQ**2/(QK+1.))**(1./(QK-1.))*RWQ
        RETURN
        END
-      ! 最大入口轴向相对速度的确定
       SUBROUTINE BAHOB(PK,GDK,RIB,II)
+      ! 最大入口轴向相对速度和临界速度的确定
+      ! ---   PK      叶栅结构参数
+      ! ---   GDK     ???
+      ! ---   RIB     叶形Y轴坐标
+      ! ---   GD      计算结果
+      ! ------    GD(1)   气流折转角
+      ! ------    GD(2)   喉部面积
+      ! ------    GD(3)   叶栅进口处平均半径
+      ! ------    GD(4)   叶栅出口处平均半径
+      ! ------    GD(5)   叶栅进出口面积比
+      ! ------    GD(6)   进气角与叶型楔角一半的差（可能用于计算攻角损失）
+      ! ---   GAGT    喉部面积修正系数
       DIMENSION PK(20),GDK(6,30),RIB(4)
       COMMON/A7/UK1/A9/RRR,T1T,UK2,UK4/A13/AK/BLOK/P1T,A1,R,UKR
       COMMON/A22/C(4)
@@ -6612,7 +6639,7 @@ C      common/add/jicanshu
       IND3=0
       K=0
       KK=0
-      QLA1=QQL(C1A)                                               !压气机入口折合流量
+      QLA1=QQL(C1A)                                               ! 入口流量系数
       IF(KRAN(35).EQ.1) WRITE(6,413)
       IF(KRAN(35).EQ.1) WRITE(6,*) '  ICOUNT= ',ICOUNT,' Z= ',Z
       IF(KRAN(35).EQ.1) WRITE(6,1000) II,IL,IM,IN,KM,KMI,
@@ -6657,7 +6684,7 @@ C      common/add/jicanshu
       IF(INDEX3.NE.2) GO TO 40
    34 CALL BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
      *RK,HA,RKI,HAI,STAGE,
-     *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)  !各区域参数计算？分离区参数计算
+     *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)  ! 各区域参数计算？分离区参数计算
       LA2=C2A*UK2/(SIN(ALFA2)*SQRT(2.*9.81*RRR*AK*AT2/(AK+1.)))
       CALL DOWN2(II,GB,QLAM,LA2,ALFA2,HAG,AK,AML2,AMMAX,KM,IM,KK)
       GO TO (70,69),KK
