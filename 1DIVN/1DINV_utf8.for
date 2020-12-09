@@ -378,6 +378,7 @@ C      open(7010,FILE='bladevars.s12s1')
   118 FORMAT(3X,'NU TEK=',10F8.4)
   119 FORMAT(3X,'NU S K=',10F8.4)
   120 FORMAT(3X,'NU S S=',10F8.4)
+      PAUSE
       stop
       END
       SUBROUTINE BBOD1(OB,PK,G3,PBX,T1,XTA3,AKP,IZ,K,KF,KDB,UBX,PBHA,
@@ -834,11 +835,11 @@ C      open(7010,FILE='bladevars.s12s1')
       ! ---   AML1    ???
       COMMON/A31/F1,XFK,XFA/A32/ANT,AKG
       ! A31
-      ! ---   F1      ???
+      ! ---   F1      转子进口流通面积
       ! ---   XFK     ???
       ! ---   XFA     ???
       ! A32
-      ! ---   ANT     ???
+      ! ---   ANT     转速百分比
       ! ---   AKG     空气流量储备系数
       COMMON/A33/QLA1C,HQCK,HQC
       ! A33
@@ -848,7 +849,7 @@ C      open(7010,FILE='bladevars.s12s1')
       COMMON/A34/PM,P1INIT
       ! A34
       ! ---   PM      第一级入口总压?
-      ! ---   P1INIT  第一级入口总压
+      ! ---   P1INIT  压气机进口总压
       COMMON/A35/IJ
       ! A35
       ! ---   IJ      ???
@@ -3951,6 +3952,7 @@ c子午流道
       END
       SUBROUTINE OPTIMA(II,RK,HA,RKI,HAI,
      *GB,GKA,X,Y,GDK,GDA,STAGE,INDEX1,INDEX4,OPTIMS,GKI,M)
+      ! 确定级的最佳点
       DIMENSION OPTIMS(10),GKI(10)
       DIMENSION RK(20),HA(20),RKI(10),HAI(10),GB(10),GKA(4,30),
      *X(16),Y(16),GDK(6,30),GDA(6,30),GD(6),GK(4),STAGE(24)
@@ -4047,15 +4049,15 @@ c子午流道
       RK(3)=XR
       RETURN
       END
-      ! 根据流道尺寸对效率的修正值（P20,3-23）
       FUNCTION HP(AHP,AL10)
+      ! 根据流道尺寸对效率的修正值（P20,3-23）
       HR=AL10**2*(25.-AHP)/144.
       IF(HR.LT.0) HR=0.
       HP=HR
       RETURN
       END
-      ! 落后角及出口相对气流角的确定
       SUBROUTINE DELTAK(RK,GK,J,E,C2C1,B20,DELT,BETA2)
+      ! 落后角及出口相对气流角的确定
       DIMENSION RK(20),GK(4)
       P=57.296
       B20=B20*P
@@ -4090,20 +4092,19 @@ c子午流道
       E=E/P
       RETURN
       END
-      ! 效率修正系数Ok计算
       SUBROUTINE OKPD(RK,C1A0,C1A0K,AL10,ANW,OK,FK)
+      ! 效率修正系数Ok计算
       DIMENSION RK(20)
       AL=AL10        !进口无因次速度数
       ANW=C1A0/C1A0K
-      IF(RK(16))1,2,1
-    2 IF(AL10-0.5)3,3,4
-    3 AL10=0.5
-    4 FK=AL10**2.-0.97*AL10+0.3
-      GOTO7
-    1 IF(AL10-0.9)5,5,6
-    5 AL10=0.9
-    6 FK=0.46*AL10-0.35
-    7 OK=1-10.*(ABS(ANW-1.)**1.334)*FK  !转子效率修正系数
+      IF(RK(16).EQ.0) THEN
+          IF(AL10.LE.0.5) AL10=0.5
+          FK=AL10**2.-0.97*AL10+0.3
+      ELSE
+          IF(AL10.LE.0.9) AL10=0.9
+          FK=0.46*AL10-0.35
+      END IF
+      OK=1-10.*(ABS(ANW-1.)**1.334)*FK  !转子效率修正系数
       AL10=AL
       RETURN
       END
@@ -4312,16 +4313,16 @@ C      common/add/jicanshu
       CA=HA(12)               ! 静子叶片型面最大相对厚度
       YY=RK(8)                ! 工作轮叶片弦长
       H1=RK(9)                ! 工作轮展弦比
-      HB3=HA(9)               ! 导向器展弦比
+      HB3=HA(9)               ! 导向器入口展弦比
       GG1=RK(7)               ! 工作轮叶栅稠度
       GG3=GG1*R1*DK1/(R2*DK2) ! 导向器入口叶栅稠度
-      H2=DK2*(1-D2)/2         ! 工作轮出口流道径向高度的一半
+      H2=DK2*(1-D2)/2         ! 转子出口流通半径
       T1=YY/GG1               ! 工作轮入口节距
       T2=YY/GG3               ! 导向器入口节距
-      HB4=HB3*DK4*(1-DDK4)/(DK2*(1-DDK2))   !???????????
-      BT3=HA(7)               ! 静叶叶栅稠度
+      HB4=HB3*DK4*(1-DDK4)/(DK2*(1-DDK2))   ! 静子出口展弦比
+      BT3=HA(7)               ! 静叶入口叶栅稠度
       BT4=BT3*SQRT((1.+DDK2**2.)/
-     *(1.+DDK4**2.))*DK2/DK4
+     *(1.+DDK4**2.))*DK2/DK4  ! 静子出口叶栅稠度
       IF(RK(16).EQ.0) THEN
           UPR2=0.1
       ELSE
@@ -4332,10 +4333,10 @@ C      common/add/jicanshu
       ALFA1=GB(4)                         ! 工作轮进口处气流角
       ALFA1=ALFA1/PA                      ! 换算成弧度制
       A1=ALFA1                            ! 入口气流角
-      F1=3.14159*DK1**2.*(1.-D1**2.)/4.   ! 流道面积
+      F1=3.14159*DK1**2.*(1.-D1**2.)/4.   ! 转子进口流通面积
       AM=SQRT(AK*(2/(AK+1))**((AK+1)/(AK-1)))      !求流量系数K=AM/SQRT(R)
       IF(II.LE.IL) AA=AM*F1/SQRT(AT1)*SIN(ALFA1)
-      ! IF(II.GT.1) AA=AA*(1.-BIS(30))      ! 级间抽气
+      IF(II.GT.1) AA=AA*(1.-BIS(II))      ! 级间抽气
       UK2=UK1*DK2/DK1
       UK4=UK1*DK4/DK1
       QLA=AN(M,2)         ! 流量系数
@@ -4363,13 +4364,13 @@ C      common/add/jicanshu
       QLA1=QLA*AKG*AA*SQRT(AT1)/(AM*F1*PPI*SIN(ALFA1))    ! 级入口流量系数
       AKR=SQRT(2*9.81*RRR*AT1*AK/(AK+1))                  ! 级入口处临界声速
       AL1=RLQMDA(QLA1)                                    ! 入口处无因次速度数
-      C1A=AL1*AKR*SIN(ALFA1)/UK1                          !入口处速度系数
+      C1A=AL1*AKR*SIN(ALFA1)/UK1                          ! 转子入口相对流量系数
       HQ=C1A/C1AO                                         ! 入口处速度系数与最佳速度之比
       ! 计算临界参数
-      CALL CRITIC(II,HQ,QLA1,C1AO,B2O,HTO,ADST,KAG,HAG,RE,UPR2,M,
-     *RK,HA,RKI,HAI,STAGE,AN,GB,GKA,
-     *INDEX2,INDEX3,C1U,C2A,BETA1,BETA2,ALFA2,LA2,AT2,
-     *LA4,C4A,PI,PIK,PIT,HT,AKPX)         ! 临界？
+      CALL CRITIC(II,HQ,QLA1,C1AO,B2O,HTO,ADST,KAG,HAG,RE,
+     *UPR2,M,RK,HA,RKI,HAI,STAGE,AN,GB,GKA,
+     *INDEX2,INDEX3,C1U,C2A,BETA1,BETA2,ALFA2,LA2,AT2,LA4,
+     *C4A,PI,PIK,PIT,HT,AKPX)         ! 临界？
       IF(IJ.EQ.0) GO TO 250
  1111 FORMAT('      环形通道阻塞面积')
       IF(KRAN(39).EQ.1) WRITE(7,1111)
@@ -4435,10 +4436,10 @@ C      common/add/jicanshu
       IF(DHQMIN(II).EQ.DA) SGM(II)=SIGMAA+2.
       CALL BRIDGE(II,STAGE,FF,GB)     ! ??????
       IF(HQ.LE.HQCK) INDEXC=II
+      GB(1)=PI*GB(1)
       GB(2)=AT2
       GB(4)=ALFA4
       PPI=PPI*PI
-      GB(1)= PI*GB(1)
       STAGE(22)=PPI
       STUP(IZY)=COD(HQ,4,STAGE(1),4,5)
       STUP(IZY+1)=COD(HQC,4,AKPX,4,6)
@@ -4456,12 +4457,12 @@ C      common/add/jicanshu
       STUP(IZY+7)=COD(PIK,4,ALFA2*PA,2,5)
       ! ***************** 输出该级参数 **************************************************
   700 FORMAT(10X,I2,F12.6,F16.6,2F10.6,F12.6)
-  701 FORMAT(10X,6HP_INIT,F16.6,/,10X,2HII,6X,2HT1,12X,2HP1,10X,5HALFA1,
+  701 FORMAT(10X,2HII,6X,2HT1,12X,2HP1,10X,5HALFA1,
      *6X,4HQLA1,8X,1HQ)
-      IF(II.EQ.1) WRITE(7,701) P1INIT
+      !IF(II.EQ.1) WRITE(7,701)
       AMK=0.0404
       QQQ=QLA1*F1/1000**2*AMK*P1INIT*PPI/PI/SQRT(AT1)/AKG*SIN(ALFA1)
-      WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
+      !WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
       ! ********************************************************************************
 	RETURN
       BETA2=BETA(C2A,R2,ALFA2)
@@ -4469,9 +4470,9 @@ C      common/add/jicanshu
      *(beta1-rk(5))*180/3.14,(ha(6)-alfa4)*180/3.14
       RETURN
       END
-      SUBROUTINE BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
-     *RK,HA,RKI,HAI,STAGE,
-     *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)
+      SUBROUTINE BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,RK,
+     *HA,RKI,HAI,STAGE,ALFA2,C2A,AT2,PI,PIK,
+     *PIT,LA4,C4A,HT,AKPX)
       DIMENSION RK(20),HA(20),RKI(10),HAI(10),STAGE(24)
       REAL LA2,LA4
       COMMON/A1/D1/A2/R1/A3/YY,H1,H2,T1,T2,CK
@@ -4495,9 +4496,9 @@ C      common/add/jicanshu
       C2AOA=HAI(9)
       INDEX5=0
       AKP=RK(19)   !压头特性校正系数
-      CALL YPPKC(HQ,C1AO,HTO,B2O,AML1,ADST,PIK,ALFA2,LA2,C2A,C2U,AT2,
-     *II,RK,HA,RKI,HAI,STAGE,
-     *AKP,XFK,XFA,UPR2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX)
+      CALL YPPKC(HQ,C1AO,HTO,B2O,AML1,ADST,PIK,ALFA2,LA2,C2A,
+     *C2U,AT2,II,RK,HA,RKI,HAI,STAGE,AKP,XFK,XFA,
+     *UPR2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX)
       IF(HQC.LE.0.) THEN
           IF(RK(20).GT.1E-6) THEN         ! 输入参数中提供：RK(20)分离边界上的空气动力载荷判据值
               FGK=RK(20)
@@ -4507,7 +4508,7 @@ C      common/add/jicanshu
           END IF
           IF(INDEX5.GT.0) RETURN
           XXX=AK*RRR*9.81
-          HQCK=HQCP(C1AO,B2O,XXX,FGK)
+          HQCK=HQCP(C1AO,B2O,XXX,FGK)     ! 分离边界点相对流量系数的初值确定
           CALL OGCC(HQ,HQCK,C1AO,HTO,B2O,AML1,ADST,FGKA,
      *    II,RK,HA,RKI,HAI,STAGE,
      *    AKP,XFK,XFA,UPR2,HQC,ALIN)
@@ -4557,7 +4558,7 @@ C      common/add/jicanshu
      *PIK,ALFA2,LA2,C2A,C2U,AT2,
      *II,RK,HA,RKI,HAI,STAGE,
      *AKP,XFK,XFA,UPR2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX)
-      FGZ=FGZA(ALFA2,ALFA4,LA2)
+      FGZ=FGZA(ALFA2,ALFA4,LA2)                       ! 级的气动载荷临界值
       IF(FGZ-FGKA)714,714,715
   714 HQC=HQCK
       GO TO 729
@@ -4569,7 +4570,7 @@ C      common/add/jicanshu
      *PIK,ALFA2,LA2,C2A,C2U,AT2,
      *II,RK,HA,RKI,HAI,STAGE,
      *AKP,XFK,XFA,UPR2,PI,PIT,ALFA4,LA4,C4A,HT,AKPX)
-      FGZ=FGZA(ALFA2,ALFA4,LA2)
+      FGZ=FGZA(ALFA2,ALFA4,LA2)                       ! 级的气动载荷临界值
       IF(FGZ-FGKA)713,716,716
   713 B=1.
       A=0.5
@@ -4591,7 +4592,7 @@ C      common/add/jicanshu
       GO TO 729
   719 DVTA=0.2*(FGZ-FGKA)
   726 IF(0.0001-ABS(FGZ-FGKA))722,723,723
-  722 HQT=HQT+DVTA
+  722 HQT=HQT+DVTA            ! 分离边界的轴向相对速度与最佳点轴向速度比值
       CALL YPPKC(HQT,C1AO,HTO,B2O,AML1,ADST,
      *PIK,ALFA2,LA2,C2A,C2U,AT2,
      *II,RK,HA,RKI,HAI,STAGE,
@@ -4612,10 +4613,10 @@ C      common/add/jicanshu
       WRITE(7,572)
    66 RETURN
       END
-      ! 转子出口参数计算
       SUBROUTINE PPZPKC(HT,AKPX,QLA1,C1A,C2AOA,
      *PIK,ALFA2,LA2,C2A,C2U,AT2,
      *PI,PIT,ALFA4,LA4,C4A,II)
+      ! 转子出口参数计算
       REAL LA2,LA4,LA2A
       COMMON/A2/R1/A6/R2,DK1,DK2,DK4,DDK1,DDK2,DDK4
       COMMON/A7/UK1/A8/ALFA1
@@ -4642,9 +4643,11 @@ C      common/add/jicanshu
       AT2=AT1+HZ/(FPP*RRR)   !出口总温
       SMUL=1.
       IF(HZ.LT.0.) SMUL=-1.
-      IF(ABS(PI-1.).LT.1.E-5) PI=1.+SMUL*1.E-5
-      IF(ABS(PI-1.).LT.1.E-5) PIK=1+SMUL*(HADK/HAD)*1.E-5
-      IF(ABS(PI-1.).LT.1.E-5) PIT=1.+SMUL*(HZ/HAD)*1.E-5
+      IF(ABS(PI-1.).LT.1.E-5) THEN
+          PI=1.+SMUL*1.E-5
+          PIK=1+SMUL*(HADK/HAD)*1.E-5
+          PIT=1.+SMUL*(HZ/HAD)*1.E-5
+      END IF
       IF(ABS(AT2-AT1).LT.1.E-5*AT1) AT2=AT1*(1.+SMUL*1.E-5)
       AT2A=AT2-(AK-1)*(C2U*UK2)**2/(2*AK*9.81*RRR)
       WW1=DK1**2/DK2**2
@@ -4665,8 +4668,14 @@ C      common/add/jicanshu
      *C2AOA,ALFA4,LA4,C4A,II)
       RETURN
       END
-      ! 理论压头系数的计算
       SUBROUTINE PHOY(HQ,UPR2,HTO,C1AO,B2O,H)
+      ! 理论压头系数的计算
+      ! ---   HQ      计算点轴向相对速度与最佳轴向相对速度的比值
+      ! ---   UPR2    亚音速叶型取0.1，超音速叶型取2.0
+      ! ---   HTO     最佳点对应的压头系数
+      ! ---   C1AO    计算点轴向相对速度
+      ! ---   B2O     转子出口相对气流角
+      ! ---   H       计算结果：压头系数
       COMMON/A1/D1/A2/R1/A5/HRK
       COMMON/A21/KRAN(40)
       BK(XX)=1.385-0.385*ALOG10(XX*10)
@@ -4827,15 +4836,19 @@ C      common/add/jicanshu
       WRITE(7,564)
    76 RETURN
       END
-      ! 计算转子/静子级气动载荷的临界值
       SUBROUTINE FGCA(ANT,RE,FGK,FGKA)
+      ! 计算转子和静子的气动载荷临界值
+      ! ---   ANT     相对换算转速
+      ! ---   RE      相对轮毂比
+      ! ---   FGK     转子气动载荷临界值
+      ! ---   FGKA    静子气动载荷临界值
       COMMON/A1/D1
       COMMON/A41/TTT
       COMMON/A21/KRAN(40)
   566 FORMAT('LINE 4815: ULT 566')  !566 FORMAT(12H FGKA 崁墑厤)
  1357 FORMAT(6F20.6)
-      AN=ANT          !相对换算转速
-      RF=D1           !相对轮毂比
+      AN=ANT                      ! 相对换算转速
+      RF=D1                       ! 相对轮毂比
       IF(ANT.LT..74) ANT=.74
       IF(ANT.GT.1.1) ANT=1.1
       IF(D1.GT..7) D1=.7
@@ -4845,13 +4858,13 @@ C      common/add/jicanshu
       BF=1.3-0.4*AF
       FGA=AF*D1+BF
       IF(FGA.GT.1.3) FGA=1.3
-      IF(RE-163000)995,996,996
-  995 FGR=1.3-0.184*RE/100000
-      GO TO 999
-  996 FGR=1
-  999 FGK=FGA*FGR
+      IF(RE.GE.163000) THEN
+          FGR=1
+      ELSE
+          FGR=1.3-0.184*RE/100000
+      END IF
+      FGK=FGA*FGR
       FGKA=FGK*1.2
-      CONTINUE
       ANT=AN
       D1=RF
       IF(KRAN(18).EQ.0) GO TO 66
@@ -4859,8 +4872,11 @@ C      common/add/jicanshu
       WRITE(6,566)
    66 RETURN
       END
-      ! 级的气动载荷临界值计算
       FUNCTION FGZA(ALFA2,ALFA4,LA2)
+      ! 计算级的气动载荷临界值
+      ! ---   ALFA2   静子入口气流角
+      ! ---   ALFA4   静子出口气流角
+      ! ---   LA2     静子入口速度系数
       REAL LA2
       COMMON/A14/HB3,HB4,CA,BT3,BT4
       COMMON/A21/KRAN(40)
@@ -4881,8 +4897,12 @@ C      common/add/jicanshu
       WRITE(7,567)
    66 RETURN
       END
-      ! 分离边界点相对流量系数的初值确定
       FUNCTION HQCP(C1AO,B2O,XXX,FGK)
+      ! 分离边界点相对流量系数的初值确定
+      ! ---   C1AO    入口轴向相对速度
+      ! ---   B2O     最佳出口相对气流角
+      ! ---   XXX     g*k*R
+      ! ---   FGK     失速边界上气动加载的临界系数值
       COMMON/IQ/IQP
       COMMON/A3/B,H1,H2,T1,T2,CK/A2/R1
       COMMON/A7/UK1/A8/ALFA1
@@ -4984,7 +5004,9 @@ C      common/add/jicanshu
       WRITE(7,563)
    66 RETURN
       END
-      FUNCTION RLQMDA(GL2A)  !由折合流量求无因次速度数
+      FUNCTION RLQMDA(GL2A)
+      ! 由流量系数求速度系数
+      ! ---   GL2A    流量系数
       COMMON/A13/AK
       COMMON/A35/IJ
       IF(GL2A.GE.1) IJ=2
@@ -6082,15 +6104,12 @@ C      common/add/jicanshu
       ! 最大入口轴向相对速度和临界速度的确定
       ! ---   PK      叶栅结构参数
       ! ---   GDK     ???
-      ! ---   RIB     叶形Y轴坐标
-      ! ---   GD      计算结果
-      ! ------    GD(1)   气流折转角
-      ! ------    GD(2)   喉部面积
-      ! ------    GD(3)   叶栅进口处平均半径
-      ! ------    GD(4)   叶栅出口处平均半径
-      ! ------    GD(5)   叶栅进出口面积比
-      ! ------    GD(6)   进气角与叶型楔角一半的差（可能用于计算攻角损失）
-      ! ---   GAGT    喉部面积修正系数
+      ! ---   RIB     计算结果
+      ! ------    RIB(1)  最大轴向相对速度
+      ! ------    RIB(2)  入口临界相对轴向速度
+      ! ------    RIB(3)  最佳攻角
+      ! ------    RIB(4)  叶栅出口处平均半径
+      ! ---   II      当前级号
       DIMENSION PK(20),GDK(6,30),RIB(4)
       COMMON/A7/UK1/A9/RRR,T1T,UK2,UK4/A13/AK/BLOK/P1T,A1,R,UKR
       COMMON/A22/C(4)
@@ -6177,24 +6196,24 @@ C      common/add/jicanshu
       GO TO 24
    23 IF(RWQ1S.LT.0.3) RWQ1S=0.3
       A=3.*RWQ1S+1.78
-      B0=1.+0.047/RWQ1S**A                    !计算缩放因子
+      B0=1.+0.047/RWQ1S**A                    ! 计算缩放因子
       IF(B0.LT.1.02) B0=1.02
-      B1O=ASIN(SIN(B1)/B0)-PK(18)/57.296      ! 最优入口相对气流角
-      C1AOK=R1/(1./TAN(B1O)+1./TAN(A1))       !最优流量系数
+      B1O=ASIN(SIN(B1)/B0)-PK(18)/57.296      ! 最佳入口相对气流角
+      C1AOK=R1/(1./TAN(B1O)+1./TAN(A1))       ! 最佳相对轴向速度
       AA=3.82*RWQ1S+1.434   
-      BKP=1.+0.017/RWQ1S**AA                  !缩放因子
+      BKP=1.+0.017/RWQ1S**AA                  ! 缩放因子
       IF(BKP.LT.1.02) BKP=1.02
-      AIOK=B1K -B1O                           ! 最佳攻角
+      AIOK=B1K-B1O                            ! 最佳攻角
       B1KP=ASIN(SIN(B1)/BKP)                  ! 经验确定临界入口相对气流角
       C1AKPK=R1/(1./TAN(B1KP)+1./TAN(A1))     ! 入口临界相对轴向速度
-      RIB(1)=CAM
-      RIB(2)=C1AKPK
-      RIB(3)=AIOK
-      RIB(4)=C1AOK
-      C(1)=RIB(1)
-      C(2)=RIB(2)
-      C(3)=B1
-      C(4)=B1KP
+      RIB(1)=CAM      ! 最大轴向相对速度
+      RIB(2)=C1AKPK   ! 入口临界相对轴向速度
+      RIB(3)=AIOK     ! 最佳攻角
+      RIB(4)=C1AOK    ! 最佳相对轴向速度
+      C(1)=RIB(1)     ! 最大轴向相对速度
+      C(2)=RIB(2)     ! 入口临界相对轴向速度
+      C(3)=B1         ! 入口相对气流角
+      C(4)=B1KP       ! 临界入口相对气流角
       RETURN
       END
       ! 计算理论能头
@@ -6251,6 +6270,7 @@ C      common/add/jicanshu
       END
       SUBROUTINE POINT(RK,HA,GK,GB,GDK,
      *GDA,HAI,RKI,STAGE,II,INDEX1,OPTIMS,M)
+      ! 计算级的最佳点
       DIMENSION OPTIMS(10)
        DIMENSION RK(20),HA(20),GK(4),GB(10),GDK(6,30),
      *GDA(6,30),STAGE(24),RKI(10),HAI(10),RIB(4)
@@ -6541,14 +6561,15 @@ C      common/add/jicanshu
       DIMENSION FX(24),STAGE(24)
       DIMENSION GB(10)
       IF(INDEX6.EQ.1) GO TO 1
-      IF(INDEX8.EQ.1) GO TO 2
-      IF(INDEX8.LT.4) RETURN
-    2 IF(IM.NE.II) RETURN
-      DO 15 J=1,24
-   15 FX(J)=STAGE(J)
+      IF(INDEX8.LT.4.AND.INDEX8.NE.1) RETURN
+      IF(IM.NE.II) RETURN
+      DO J=1,24
+          FX(J)=STAGE(J)
+      END DO
     7 CONTINUE
-      DO 4 J=1,7
-    4 PDL1(J)=SL1(J)
+      DO J=1,7
+          PDL1(J)=SL1(J)
+      END DO
       PDL1(8)=BET2
       PDL1(9)=AT1
       PDL1(10)=ALFA1*57.296
@@ -6557,12 +6578,14 @@ C      common/add/jicanshu
       SGKP=SIGKKP
       GO TO 3
     1 IF(II.NE.IM.OR.ABS(DSIGMA).GT.GB(10)) GO TO 8
-      DO 6 J=1,24
-    6 FX(J)=STAGE(J)
+      DO J=1,24
+          FX(J)=STAGE(J)
+      END DO
     9 CONTINUE
       IF(KM.EQ.1) GO TO 7
-    3 DO 5 J=1,6
-    5 PDL2(J)=SL2(J)
+    3 DO J=1,6
+          PDL2(J)=SL2(J)
+      END DO
       PDL2(7)=AT1
       PDL2(8)=AT2
       PDL2(9)=ALFA1*57.296
@@ -6571,6 +6594,16 @@ C      common/add/jicanshu
       RETURN
     8 IF(II.NE.IN.OR.II.NE.IM) RETURN
       GO TO 9
+      END
+      FUNCTION CQ(QLA1)
+          COMMON/A8/ALFA1/A9/RRR,AT1,UK2,UK4
+          COMMON/A13/AK
+          COMMON/A28/BET2,PPI
+          COMMON/A31/F1,XFK,XFA
+          COMMON/A34/PM,P1INIT
+          AKKK=SQRT(AK/RRR*(2/(AK+1))**((AK+1)/(AK-1)))
+          CQ=QLA1*AKKK*F1*P1INIT*PPI/SQRT(AT1)*SIN(ALFA1)/1000**2
+          RETURN
       END
       SUBROUTINE CRITIC(II,HQ,QLA1,C1AO,B2O,HTO,ADST,KAG,HAG,RE,UPR2,M,
      *RK,HA,RKI,HAI,STAGE,AN,GB,GKA,
@@ -6615,6 +6648,10 @@ C      common/add/jicanshu
   802 FORMAT (5X,7H HQKPA=,F9.6)
   900 FORMAT('   CRITIC   妿崡厤')
  1000 FORMAT(6I20)
+ 1975 FORMAT(12X,2X,2HI=,I2,2X,7HICOUNT=,I2,2X,I3,2X,5HQLA1=,F8.6,2X,2HQ
+     *=F16.6)
+      IOUT=0
+      IOFILE=0
       IF(KRAN(35).EQ.1) WRITE(6,800)
       ICOUNT=0
       QLAM=AN(M,2)
@@ -6627,7 +6664,7 @@ C      common/add/jicanshu
       HTM=3.
       PSL1(1)=0.
       C2AOA=HAI(9)
-      HQP=HQ
+      HQP=HQ          ! 入口轴向速度与最佳入口轴向速度之比
       IND4=0
       IND5=0
       INDEX3=0
@@ -6639,7 +6676,8 @@ C      common/add/jicanshu
       IND3=0
       K=0
       KK=0
-      QLA1=QQL(C1A)                                               ! 入口流量系数
+      QLA1=QQL(C1A)       ! 入口流量系数
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,28,QLA1,CQ(QLA1)
       IF(KRAN(35).EQ.1) WRITE(6,413)
       IF(KRAN(35).EQ.1) WRITE(6,*) '  ICOUNT= ',ICOUNT,' Z= ',Z
       IF(KRAN(35).EQ.1) WRITE(6,1000) II,IL,IM,IN,KM,KMI,
@@ -6685,6 +6723,7 @@ C      common/add/jicanshu
    34 CALL BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
      *RK,HA,RKI,HAI,STAGE,
      *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)  ! 各区域参数计算？分离区参数计算
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,34,QLA1,CQ(QLA1)
       LA2=C2A*UK2/(SIN(ALFA2)*SQRT(2.*9.81*RRR*AK*AT2/(AK+1.)))
       CALL DOWN2(II,GB,QLAM,LA2,ALFA2,HAG,AK,AML2,AMMAX,KM,IM,KK)
       GO TO (70,69),KK
@@ -6715,14 +6754,16 @@ C      common/add/jicanshu
       CALL BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
      *RK,HA,RKI,HAI,STAGE,
      *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,301,QLA1,CQ(QLA1)
       LA2=C2A*UK2/(SIN(ALFA2)*SQRT(2.*9.81*RRR*AK*AT2/(AK+1.)))
       SL1(4)=PI
       SL1(5)=PIK
       SL1(6)=PIT
       SL1(7)=LA2
       IF(INDEX3.NE.0) GO TO 330
-      DO 331 J=1,7
-  331 PSL1(J)=SL1(J)
+      DO J=1,7
+          PSL1(J)=SL1(J)
+      END DO
   330 CONTINUE
       IF(INDEX3.EQ.3) GO TO 51
    41 IND1=1
@@ -6738,10 +6779,12 @@ C      common/add/jicanshu
       C1AKP=C1A
       AL11KP=AL11
       QLA1=QQL(C1A)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,671,QLA1,CQ(QLA1)
       CALL BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
      *RK,HA,RKI,HAI,STAGE,
      *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)
       BETA2=BETA(C2A,R2,ALFA2)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,672,QLA1,CQ(QLA1)
       BET2=BETA2
       PITKP=PIT
       PIKKP=PIK
@@ -6757,6 +6800,7 @@ C      common/add/jicanshu
       HQK=1.
       FCA=SL1 (1)
       QLA1=QQL(FCA)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,51,QLA1,CQ(QLA1)
       IF(HTM.GE.2) HTM=HT
       CALL DOWN2(II,GB,QLAM,LA2,ALFA2,HAG,AK,AML2,AMMAX,KM,IM,KK)
       GO TO (71,69),KK
@@ -6788,6 +6832,7 @@ C      common/add/jicanshu
   251 CONTINUE
       ! 计算出口流量及流速
       CALL AEXIT(C2A,AT2,PI,QLA1,C2AOA,ALFA4,LA4,C4A,II)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,251,QLA1,CQ(QLA1)
       GO TO 210
   102 IND4=1
       DSIGMA=-ABS(DSIGMA)
@@ -6817,9 +6862,11 @@ C      common/add/jicanshu
       HQ=SL11(1)
       FCA=SL11(2)
       QLA1=QQL(FCA)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,104,QLA1,CQ(QLA1)
    49 CALL BLOCK(II,HQ,QLA1,C1AO,B2O,HTO,ADST,RE,UPR2,
      *RK,HA,RKI,HAI,STAGE,
      *ALFA2,C2A,AT2,PI,PIK,PIT,LA4,C4A,HT,AKPX)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,49,QLA1,CQ(QLA1)
       LA2=C2A*UK2/(SIN(ALFA2)*SQRT(2.*9.81*RRR*AK*AT2/(AK+1.)))
       CALL ALEVEL(HAG,ALFA2,LA2,AK,AMKPA,AM2,K,Z)
       IF(KRAN(35).EQ.1) WRITE(6,700) Z
@@ -6859,8 +6906,9 @@ C      common/add/jicanshu
       AT2=SL2(3)
       IF(IR.EQ.1.AND.ABS(DSIGMA).LT.GB(10)) GOTO 211
       IF(PSL1(1).EQ.0) GO TO 210
-      DO 302 J=1,7
-  302 SL1(J)=PSL1(J)
+      DO J=1,7
+          SL1(J)=PSL1(J)
+      END DO
   210 CONTINUE
   211 IF(II.NE.IN) GO TO 214
       SIGMA=S
@@ -6876,6 +6924,7 @@ C      common/add/jicanshu
   212 HQ=HQP
       C1A=HQ*C1AO
       QLA1=QQL(C1A)
+      IF(IOUT.EQ.1) WRITE(IOFILE,1975)II,ICOUNT,212,QLA1,CQ(QLA1)
       RETURN
    45 IND2=2
       GO TO 47
@@ -7275,9 +7324,17 @@ C      common/add/jicanshu
    12   R=F(1)
         RETURN
       END
-      ! 计算出口流量及流速
       SUBROUTINE AEXIT(C2A,AT2,PI,QLA1,
-     *C2AOA,ALFA4,LA4,C4A,II)  !静叶出口计算
+     *C2AOA,ALFA4,LA4,C4A,II)
+      ! 计算出口流量及流速
+      ! ---   C2A     ???
+      ! ---   AT2     ???
+      ! ---   PI      ???
+      ! ---   QLA1    ???
+      ! ---   C2AOA   ???
+      ! ---   ALFA4   ???
+      ! ---   LA4     ???
+      ! ---   C4A     ???
       REAL LA4,NUA
       COMMON/A2/R1/A6/R2,DK1,DK2,DK4,DDK1,DDK2,DDK4
       COMMON/A7/UK1/A8/ALFA1
@@ -7293,8 +7350,8 @@ C      common/add/jicanshu
       QLA4=QLA1*WW1*WW2*WW3*WW4/PI    ! 出口折合流量计算
       LA4=RLQMDA(QLA4)
       C4A=LA4*AKR2*SIN(ALFA4O)/UK4
-      ! 满足以下条件之后
       IF(ALFA4O.GE.1.57096.OR.ALF4C.GT.0.) THEN
+          ! 入口气流角大于180度或ALF4C大于0
           ALFA4=ALFA4O
           RETURN
       END IF
