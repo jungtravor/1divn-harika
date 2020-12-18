@@ -1293,6 +1293,8 @@ C      open(7010,FILE='bladevars.s12s1')
       ELSE
           AKPX=(TT1*(PP**((AK-1.)/AK)-1.))/(GB(2)-TT1)   !!!!!!!!!!!! 等熵效率
       END IF
+      PPAN=AN(M,2)
+      QQQ=AN(M,2)*0.9*F1/1000**2*0.0404*GB(1)/SQRT(PPPP)*SIN(ALFA1)
       GPRBIX=G*10328.746/GB(1)*SQRT(GB(2)/288.)           ! 轴流压气机出口折合流量
       IF(AKPDMA.LE.AKPX) THEN
           AKPDMA=AKPX
@@ -1316,10 +1318,10 @@ C      open(7010,FILE='bladevars.s12s1')
           endif
           IF(KRAN(39).NE.0.OR.KRAN(40).NE.0) THEN
               WRITE(7,116)
-              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX    !输出
+              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX,GB(1),GB(2),QQQ,PPAN !输出
           ELSE
               IF(NG-1.EQ.((NG-1)/10)*10) WRITE(7,116)
-              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX    ! 输出流量系数、等熵效率等参数
+              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX,GB(1),GB(2),QQQ,PPAN ! 输出流量系数、等熵效率等参数
               if(outflag.eq.1) then
                   WRITE(7002,*) G,PP,AKPX
               endif
@@ -4456,13 +4458,13 @@ C      common/add/jicanshu
       STUP(IZY+6)=COD(C2A,4,LA2,4,5)
       STUP(IZY+7)=COD(PIK,4,ALFA2*PA,2,5)
       ! ***************** 输出该级参数 **************************************************
-  700 FORMAT(10X,I2,F12.6,F16.6,2F10.6,F12.6)
+  700 FORMAT(10X,I2,F12.6,F16.6,2F10.6,2F12.6)
   701 FORMAT(10X,2HII,6X,2HT1,12X,2HP1,10X,5HALFA1,
      *6X,4HQLA1,8X,1HQ)
-      !IF(II.EQ.1) WRITE(7,701)
+      IF(II.EQ.1) WRITE(7,701)
       AMK=0.0404
       QQQ=QLA1*F1/1000**2*AMK*P1INIT*PPI/PI/SQRT(AT1)/AKG*SIN(ALFA1)
-      !WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
+      WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
       ! ********************************************************************************
 	RETURN
       BETA2=BETA(C2A,R2,ALFA2)
