@@ -27,5 +27,10 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-		<File RelativePath=".\1DINV_utf8.for"/></Filter></Files>
+		<File RelativePath=".\1DINV_utf8.for"/>
+		<File RelativePath=".\BLOCK.for"/>
+		<File RelativePath=".\CRITIC.for"/>
+		<File RelativePath=".\HARIKA.for"/>
+		<File RelativePath=".\NEOPT.for"/>
+		<File RelativePath=".\OPTIMA.for"/></Filter></Files>
 	<Globals/></VisualStudioProject>
