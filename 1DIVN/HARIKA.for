@@ -231,7 +231,7 @@
   116 FORMAT(5X,9HQ(LQMBDA),
      *6X,4HPI K,9X,3HKPD,9X,1HG,10X,4HG PP,6X,6HGPRBIX)
   117 FORMAT(5X,'characteristic axi. stage',5X,'N =',F5.3,
-     *5X,'UK =',F5.1)
+     *5X,'UK =',F5.1,5X,'QL =',F5.3)
   118 FORMAT(5X,5HN OTH,F10.5/2X,4HGKI=,10F10.5)
   119 FORMAT(' 压力不再提高点 ')
       OPEN(25,FILE='PICTURE.s1unknown',ACCESS='DIRECT',RECL=12)
@@ -630,7 +630,7 @@
       ! 是否打印一些输出信息
       IF(IPE4.NE.0) THEN
           IF(NG.EQ.1) then
-              WRITE(7,117)BN,CN
+              WRITE(7,117)BN,CN,QL1
               write(numberchar,'(f5.3)') bn
               if(outflag.eq.1) then
               write(7002,*)'zone t="character'//trim(numberchar)//'"'
