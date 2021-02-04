@@ -41,7 +41,6 @@
      17X,3HC1A,8X,2HHQ,6X,4HHQCK,7X,3HHQC,5X,5HHQKPK,4X,5HHQKPA)
   113 FORMAT(2X,I2,1X,11F10.4)
   933 FORMAT(6F20.6)
-      IIOUT=0
       PA=57.296
       HQ=0.
       HQCK=0.
@@ -220,13 +219,17 @@
       STUP(IZY+6)=COD(C2A,4,LA2,4,5)
       STUP(IZY+7)=COD(PIK,4,ALFA2*PA,2,5)
       ! ***************** 输出该级参数 **************************************************
-  700 FORMAT(10X,I2,F12.6,F16.6,2F10.6,2F12.6)
+  700 FORMAT(10X,I2,F12.6,F16.6,2F10.6,2F12.4)
   701 FORMAT(10X,2HII,6X,2HT1,12X,2HP1,10X,5HALFA1,
      *6X,4HQLA1,8X,1HQ)
-      IF(II.EQ.1.AND.IIOUT.EQ.1.) WRITE(7,701)
-      AMK=0.0404
-      QQQ=QLA1*F1/1000**2*AMK*P1INIT*PPI/PI/SQRT(AT1)/AKG*SIN(ALFA1)
-      IF(IIOUT.EQ.1.) WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
+      IIOUT=0
+      IF(IIOUT.EQ.1.) THEN
+          IF(II.EQ.1) WRITE(7,701)
+          AMK=0.0404
+          QQQ=QLA1*F1/1000**2*AM/SQRT(RRR*9.81)*GB(1)*9.81/
+     *PI/SQRT(AT1)/AKG*SIN(ALFA1)
+          WRITE(7,700)II,AT1,P1INIT*PPI,ALFA1,QLA1,QQQ
+      END IF
       ! ********************************************************************************
 	RETURN
       BETA2=BETA(C2A,R2,ALFA2)

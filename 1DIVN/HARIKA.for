@@ -229,7 +229,7 @@
   102 FORMAT(20I5)
   113 FORMAT(9F12.4)
   116 FORMAT(5X,9HQ(LQMBDA),
-     *6X,4HPI K,9X,3HKPD,9X,1HG,10X,4HG PP,6X,6HGPRBIX)
+     *6X,4HPI K,9X,3HKPD,9X,1HG,10X,4HG PP,6X,6HGPRBIX,6X,3HGPR)
   117 FORMAT(5X,'characteristic axi. stage',5X,'N =',F5.3,
      *5X,'UK =',F5.1,5X,'QL =',F5.3)
   118 FORMAT(5X,5HN OTH,F10.5/2X,4HGKI=,10F10.5)
@@ -243,6 +243,7 @@
   191 FORMAT(8X,'抽气百分比',8X,F13.6)
   190 FORMAT(8X,'计算范围')
   189 FORMAT(8X,'进口参数')
+      STEPO=0                 ! 输出step过程
       ALF4C=IWRITE            !记录数组符号
       LSRFIN=0                ! 是否（1/0）寻找与工作状态线的交点
       IF(LSR.EQ.2) THEN
@@ -613,9 +614,17 @@
       ELSE
           AKPX=(TT1*(PP**((AK-1.)/AK)-1.))/(GB(2)-TT1)   !!!!!!!!!!!! 等熵效率
       END IF
-      PPAN=AN(M,2)
-      QQQ=AN(M,2)*0.9*F1/1000**2*0.0404*GB(1)/SQRT(PPPP)*SIN(ALFA1)
-      GPRBIX=G*10328.746/GB(1)*SQRT(GB(2)/288.)           ! 轴流压气机出口折合流量
+      ! 计算出口物理流量
+      QQQ=QLA1*F1*1E-6*D/SQRT(9.81/RRR)/SQRT(RRR*9.81)
+      QQQ=QQQ*GB(1)*9.81/SQRT(GB(2))*SIN(ALFA1)
+      !QQQ=QLA1*F1/1000**2*AM/SQRT(RRR*9.81)*GB(1)*9.81/
+      !*PI/SQRT(AT1)/AKG*SIN(ALFA1)
+      QK=0
+      DO LI=1,IIF
+          QK=QK+BIS(LI)
+      END DO
+      !QQQ=G*(1.-QK)
+      GPRBIX=G*(1.-QK)*10328.746/GB(1)*SQRT(GB(2)/288.)           ! 轴流压气机出口折合流量
       IF(AKPDMA.LE.AKPX) THEN
           AKPDMA=AKPX
           STORE(327)=GPP
@@ -638,10 +647,10 @@
           endif
           IF(KRAN(39).NE.0.OR.KRAN(40).NE.0) THEN
               WRITE(7,116)
-              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX
+              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX,QQQ
           ELSE
               IF(NG-1.EQ.((NG-1)/10)*10) WRITE(7,116)
-              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX
+              WRITE(7,113)QL1,PP,AKPX,G,GPP,GPRBIX,QQQ
               if(outflag.eq.1) then
                   WRITE(7002,*) G,PP,AKPX
               endif
@@ -765,6 +774,7 @@
           CALL STEPIN(INDEXZ,INDEX2,INDEX6,INDEX9,INDEXB,LSR,IM,KM,IQP,
      *PR,IZAP,CU,ZAP,AN(M,2),GPP,PP,DELTQ,SIGMA,DSIGMA,QSET,DQSET,SISET,
      *DSISET,SDELTQ,WCP,EP,GUIDE,SGUIDE,KSTEP)
+          IF(STEPO.EQ.1)WRITE(7,*)'STEPIN'
           IF(IQP.EQ.3.OR.INDEXZ.EQ.2) THEN
               ! INDEXZ=1
               IF(INDEXZ.EQ.2) THEN
@@ -793,6 +803,7 @@
  820   CALL STEPAT(INDEX2,INDEXB,INDEXD,INDEXQ,INDEX6,INDEX8,
      *IND8R,QQS,QQF,GB(8),ES,AN(M,2),PP,GPP,Q1,P1,QGP,PGP,GGP,Q2,P2,
      *DELTQ,QMEM,DQMEM,ZAP,IQP,KSTEP)
+      IF(STEPO.EQ.1)WRITE(7,*)'STEPAT'
       IF(INDEXB*IZAP.EQ.3) QH=QGP
       IF(IQP.EQ.1.OR.PP.GE.PGP) THEN
           STORE(164)=GPP
@@ -817,6 +828,7 @@
   805 CALL STEPON(M,IQP,IQ,IDQC,INDEXQ,INDEX2,INDEX4,INDEX6,INDEX7,
      *IPE4,GB,AN,DELTQ,PP,QL1,AKPX,QH,QGP,PGP,QQS,QQF,IM,
      *KM,INDEX8,IND8R,INDEXB,KSTEP,BRANCH,POINTS)
+      IF(STEPO.EQ.1)WRITE(7,*)'STEPON'
       MG=1-KSTEP/5
       IG=MG*(IG-1)+1
       IGG=IGG*MG

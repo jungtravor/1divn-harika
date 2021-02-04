@@ -32,5 +32,7 @@
 		<File RelativePath=".\CRITIC.for"/>
 		<File RelativePath=".\HARIKA.for"/>
 		<File RelativePath=".\NEOPT.for"/>
-		<File RelativePath=".\OPTIMA.for"/></Filter></Files>
+		<File RelativePath=".\OPTIMA.for"/>
+		<File RelativePath=".\READ.for"/>
+		<File RelativePath=".\STEP.for"/></Filter></Files>
 	<Globals/></VisualStudioProject>

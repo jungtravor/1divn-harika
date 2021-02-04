@@ -12,7 +12,7 @@ singleFig = 0
 if not os.path.exists('figure'):
     os.mkdir('figure')
 
-f = open("Result_utf8.1D", "r", encoding="utf-8")
+f = open("Result_utf8-0.02.1D", "r", encoding="utf-8")
 fileContent = f.readlines()
 
 reading = 0

@@ -116,7 +116,7 @@ C     open(7006,FIlE='parastos2.s12s2')
    55 CONTINUE
       ! 抽气参数加入GKA(2,I)空气流量储备系数
       DO I=1,IZ
-          GKA(2,I)=GKA(2,I)-BIS(I)
+          GKA(2,I)=GKA(2,I)
       END DO
       ! 开始计算气动参数
       IF(IOCK.EQ.2) GOTO 31
@@ -378,306 +378,8 @@ C      open(7010,FILE='bladevars.s12s1')
   118 FORMAT(3X,'NU TEK=',10F8.4)
   119 FORMAT(3X,'NU S K=',10F8.4)
   120 FORMAT(3X,'NU S S=',10F8.4)
-      PAUSE
+      !PAUSE
       stop
-      END
-      SUBROUTINE BBOD1(OB,PK,G3,PBX,T1,XTA3,AKP,IZ,K,KF,KDB,UBX,PBHA,
-     *D3,D31,ID1,IZ2,BXD1,ALF1,IOCK,N,AN,TETA,GB,PSI)
-      DIMENSION D3(9),D31(30),ID1(33),BXD1(10),
-     *C1AS(30),C2AS(30),AN(10,3),TETA(10,30),GB(10),YK(30)
-      REAL ID1
-      COMMON/YKC/YK
-      COMMON/AH11/AH1(30),CMKA,CATAK
-      COMMON/C12AS/C1AS,C2AS
-      COMMON/BIS/BISR,BISS                             ! 级间引气参数
-      DIMENSION BISR(30),BISS(30)
-      DIMENSION AIB(100)
-      READ(4,*)PBX,T1,UBX,PBHA,ID1(4),ID1(32)
-      write(0,*)PBX,T1,UBX,PBHA,ID1(4),ID1(32)
-      READ(4,*)OB,PK,G3,XTA3,ID1(13),AKP
-      write(0,*)OB,PK,G3,XTA3,ID1(13),AKP
-      READ(4,*)IZ,KF,IOCK,CMKA,CATAK
-      write(0,*)IZ,KF,IOCK,CMKA,CATAK
-      K=1
-      KDB=1
-      WRITE(7,2)
-      WRITE(7,17)
-      WRITE(7,5)
-      open(7011,file="Par_BC.1DDtoANA")
-      
-      WRITE(7,6)PBX,T1,UBX,PBHA,ID1(4),ID1(32)
-      write(7011,*)pbx    ! 进口总压
-      write(7011,*)T1     ! 进口总温
-      write(7011,*)id1(4) ! 进口气流角
-
-     
-      write(7006,*)'TPG'               ! 标识1
-      write(7006,'(2f15.8)') PBX,T1    ! 输出进口总压和总温
-      IZ2=IZ+1                            ! 用于标识每级间隙的个数，即IZ+1
-      IZ3=IZ*2+1                          ! 用于标识每个叶栅的个数，即IZ*2+1
-      WRITE(7,17)
-      WRITE(7,10)
-      WRITE(7,57)OB,PK,G3,XTA3,ID1(13),AKP
-      write(7011,*)ob  ! 转速
-      write(7011,*)pk  ! 压比
-      write(7011,*)g3  ! 流量
-      
-      write(7006,'(2f15.8,i)') G3,OB,iz ! 输出设计流量，转速，级数
-      WRITE(7,17)
-      DO 27 I=1,9
-      D3(I)=0.            ! 初始化D3数组为0
-   27 CONTINUE
-      WRITE(7,12)
-      WRITE(7,26)IZ,KF,IOCK,CMKA,CATAK
-      write(7011,*)iz   ! 级数
-      write(7011,*)kf   ! 叶型编码
-      write(7011,*)iock ! 压气机形式编码
-      
-      close(7011)
-      READ(4,*)(D31(I),I=1,IZ2)   ! 读取每级入口处工作轮外径和压气机出口外径
-      WRITE(7,17)
-      ! TODO: 此处if语句可优化
-      IF(D31(IZ2).EQ.0.) GOTO 28  ! 当压气机出口外径为0时，数据错误，终止程序
-      GOTO 29
-   28 PRINT*,'PUT DK1(IZ+1)'
-      STOP
-   29 CONTINUE
-      J=IZ2/2                 ! J为？
-      IF(D31(2).NE.0) GOTO 40
-      IF(IZ.EQ.1) GOTO 40
-      DO 41 I=1,J             ! 当级数不为1且没有给出其他级外径时，自动计算每级外径
-   41 D31(I)=D31(1)
-      J1=IZ-J
-      DO 42 I=1,J1
-   42 D31(I+J)=D31(1)-(D31(1)-D31(IZ2))/(IZ2-J)*I
-   40 CONTINUE
-      IF(IZ2.GT.10)GOTO 33    ! 每行输出10个级的外径
-      WRITE(7,23)(D31(I),I=1,IZ2)
-      WRITE(7,17)
-      GOTO 34
-   33 WRITE(7,23)(D31(I),I=1,10)
-      WRITE(7,17)
-      WRITE(7,23)(D31(I),I=11,IZ2)
-      WRITE(7,17)
-      IF(IZ2.GT.20)GOTO 336
-      GOTO 34
-  336 WRITE(7,23)(D31(I),I=21,IZ2)
-      WRITE(7,17)
-   34 CONTINUE
-      READ(4,*)(C1AS(I),I=1,IZ2)  ! 读取工作轮前轴向速度
-      write(0,*)(C1AS(I),I=1,IZ2)
-      WRITE(7,35)(C1AS(I),I=1,IZ2)
-      WRITE(7,17)
-      READ(4,*)(C2AS(I),I=1,IZ)   ! 读取工作轮后轴向速度
-      write(0,*)(C2AS(I),I=1,IZ)
-      WRITE(7,36)(C2AS(I),I=1,IZ)
-      WRITE(7,17)
-      ID1(1)=C1AS(1)
-      ID1(2)=(C1AS(1)+C1AS(IZ2))/2.
-      ID1(3)=C1AS(IZ2)
-      READ(4,*)(AH1(I),I=1,IZ)    ! 读取每一级压头损耗系数
-      write(0,*)(AH1(I),I=1,IZ)
-      WRITE(7,37)(AH1(I),I=1,IZ)
-      WRITE(7,17)
-      ID1(7)=AH1(1)
-      ID1(9)=AH1(IZ)
-      ID1(8)=AH1(1)
-      READ(4,*)(YK(I),I=1,IZ)     ! 读取叶冠的展弦比变化系数
-      write(0,*)(YK(I),I=1,IZ)
-      WRITE(7,38)(YK(I),I=1,IZ)
-      WRITE(7,17)
-      READ(4,*)ID1(5),ID1(6),ID1(10),ID1(11),ID1(12)              ! 读取反力度和理论压头减小系数相关数据
-      write(0,*)ID1(5),ID1(6),ID1(10),ID1(11),ID1(12)
-      READ(4,*)ID1(14),ID1(15),ID1(16),ID1(17),ID1(18),ID1(24)    ! 读取工作轮和导向器叶片的相关数据
-      write(0,*)ID1(14),ID1(15),ID1(16),ID1(17),ID1(18),ID1(24)
-      READ(4,*)ID1(19),ID1(20),ID1(21),ID1(27),ID1(25),ID1(26)    ! 读取入口导叶的相关数据
-      write(0,*)ID1(19),ID1(20),ID1(21),ID1(27),ID1(25),ID1(26)
-      READ(4,*)BXD1(1),BXD1(2),BXD1(3),ALF1,BXD1(8),PSI           ! 读取离心级的相关数据
-      IF(PSI.LT.0..OR.PSI.GT.60.) PSI=0.                          ! 工作轮出口通道中线与转轴法线的夹角应处于0~60度范围内
-      write(0,*)BXD1(1),BXD1(2),BXD1(3),ALF1,BXD1(8),PSI
-      READ(4,*)BXD1(6),BXD1(7),BXD1(4),BXD1(9),BXD1(10)           ! 读取离心级的相关数据
-      write(0,*)BXD1(6),BXD1(7),BXD1(4),BXD1(9),BXD1(10)
-      READ(4,*)GB(8),GB(9),GB(10),N                               ! 读取流量特性线计算指标
-      write(0,*)GB(8),GB(9),GB(10),N
-      DO 79 I=1,N
-      READ(4,*)(AN(I,J),J=1,2)                                    ! 读取特性线的转速百分比及流量系数计算初始点
-      write(0,*)(AN(I,J),J=1,2)
-   79 CONTINUE
-      DO 77 I=1,N
-      READ(4,*)(TETA(I,J),J=1,IZ2)                                ! 读取可调叶冠转动角数组
-      write(0,*)(TETA(I,J),J=1,IZ2)
-   77 CONTINUE
-      ! 添加级间引气参数
-      DO 814 I=1,IZ
-      READ(4,*)BISR(I),BISS(I)
-  814 CONTINUE
-      ID1(22)=0.                                                  ! 未知用途
-      ID1(23)=0.
-      ID1(28)=4300.
-      ID1(29)=4300.
-      ID1(30)=4300.
-      ID1(31)=100.
-      ID1(33)=1.
-      WRITE(7,8)
-      WRITE(7,3)ID1(5),ID1(6),ID1(10),ID1(11),ID1(12)
-      WRITE(7,17)
-      WRITE(7,19)
-      WRITE(7,22)ID1(14),ID1(15),ID1(16),ID1(17),ID1(18),ID1(24)
-      WRITE(7,17)
-      WRITE(7,24)
-      WRITE(7,21)ID1(19),ID1(20),ID1(21),ID1(27),ID1(25),ID1(26)
-      WRITE(7,17)
-      WRITE(7,13)
-      WRITE(7,16)BXD1(1),BXD1(2),BXD1(3),ALF1,BXD1(8),PSI
-      WRITE(7,17)
-      WRITE(7,20)
-      WRITE(7,16)BXD1(6),BXD1(7),BXD1(4),BXD1(9),BXD1(10)
-      WRITE(7,17)
-      WRITE(7,76)
-      WRITE(7,75)GB(8),GB(9),GB(10),N
-      WRITE(7,17)
-      WRITE(7,74)
-      DO 70 I=1,N
-      WRITE(7,73)(AN(I,J),J=1,2)
-   70 CONTINUE
-      WRITE(7,17)
-      WRITE(7,72)
-      DO 71 I=1,N
-      WRITE(7,78)(TETA(I,J),J=1,IZ2)
-   71 CONTINUE
-      WRITE(7,17)
-   74 FORMAT(6X,1HN,7X,1HQ)
-   73 FORMAT(10F8.4)
-   78 FORMAT(10F8.2)
-   72 FORMAT(6X,4HTETA)
-   75 FORMAT(2X,F8.6,2X,F8.6,2X,F8.6,5X,I2)
-   76 FORMAT(6X,2HDQ,8X,2HEQ,8X,2HES,7X,2HNV)
-    1 FORMAT(8F9.1)
-    4 FORMAT(6I9)
-    2 FORMAT(35X,'计算结果输出列表')
-    3 FORMAT(5(3X,F5.3))
-   26 FORMAT (5X,I2,10X,I1,10X,I2,8X,F4.2,8X,F4.2)
-   57 FORMAT(2X,F8.0,5(3X,F7.3))
-    5 FORMAT (5X,2HP1,5X,2HT1,6X,2HSP,6X,4HSVNA,4X,4HALF1,3X,4HALFZ)
-    6 FORMAT (F8.1,2X,F6.1,2X,F6.3,
-     *2X,F6.3,2X,F6.2,2X,F6.2)
-    8 FORMAT (5X,4HTAUS,3X,4HDTAU,5X,3HKH1,5X,3HDKH,5X,5HKHMIN)
-   10 FORMAT (5X,1HN,9X,2HPK,9X,1HG,9X,3HETA,9X,2HKG,6X,3HKPI)
-   12 FORMAT (8X,1HZ,8X,2HKF,8X,4HIOCK,7X,4HCMKA,7X,5HCATAK)
-   20 FORMAT (7X,3HD1P,6X,3HD1V,7X,3HBL2,6X,4HSKOL,6X,4HOTBR)
-   13 FORMAT (7X,3HPIS,6X,3HZST,7X,3HALP,6X,4HALF1,6X,4HAL1C,6X,3HPSI)
-   16 FORMAT (6(4X,F6.3))
-   17 FORMAT (80(1H-))
-   19 FORMAT (5X,4HHRK1,5X,4HHRKZ,5X,5HXFVNA,4X,4HXFRK,5X,4HXFNA,
-     *5X,4HPRK1)
-   35 FORMAT (6X,3HC1A/10F8.1)
-   36 FORMAT (6X,3HC2A/10F8.1)
-   37 FORMAT (6X,2HHZ/10F8.4)
-   38 FORMAT (6X,2HYK/10F8.2)
-   23 FORMAT (6X,3HDK1/10F8.4)
-   22 FORMAT (6(4X,F5.3))
-   24 FORMAT(5X,4HPVNA,5X,4HHVNA,4X,6HB/TVNA,4X,5HCMVNA,4X,3HLOS,4X,
-     *4HDLOS)
-   21 FORMAT (6(4X,F5.3))
-      RETURN
-      END
-      SUBROUTINE BBOD2(IOCK,PIK,GPRR,GB,GKA,AN,A,B,IZ,KF,NV,TETA,OBC,
-     *ETCBK,D2C,BET2L,ALA3)
-      COMMON/BIS/BIS(30)
-      DIMENSION GB(10),GKA(4,30),AN(10,3),A(20,30),B(20,30),TETA(10,30)
-      READ(4,*)IOCK,PIK,GPRR
-      WRITE(7,4)
-      IF(IOCK.EQ.1) WRITE(7,1)
-    1 FORMAT(5X,'output axi.')
-      IF(IOCK.EQ.2) WRITE(7,2)
-    2 FORMAT(5X,'output cen.')
-      WRITE(7,4)
-      WRITE(7,50)PIK,GPRR
-   50 FORMAT(5X,'PIR=',F6.3,5X,'GPRR=',F6.2)
-      IF(IOCK.EQ.2) GOTO 3
-      WRITE(7,4)
-    4 FORMAT(80(1H-))
-      READ(4,*)IZ,NV,KF
-      WRITE(7,6)IZ,NV,KF
-    6 FORMAT(5X,'IZ=',I2,5X,'NV=',I2,5X,'KF=',I2)
-      WRITE(7,4)
-      READ(4,*)(GB(I),I=1,10)  
-      WRITE(7,7)
-    7 FORMAT(5X,2HP1,5X,2HT1,4X,3HUK1,4X,4HALF1,10X,1HR,6X,1HK,6X,2HDQ,
-     *6X,2HEQ,6X,2HES)
-      WRITE(7,8)(GB(I),I=1,10)
-    8 FORMAT(F8.1,1X,F6.1,2X,F6.2,1X,F5.1,F5.2,F8.2,F8.4,F8.6,F8.6,F8.6)
-      WRITE(7,4)
-      DO 9 J=1,IZ
-      READ(4,*)(A(I,J),I=1,20)
-    9 CONTINUE
-      WRITE(7,12)
-      DO 10 J=1,IZ
-      WRITE(7,11)(A(I,J),I=1,20)
-   10 CONTINUE
-   11 FORMAT(10F8.4)
-   12 FORMAT(6X,'工作轮结构参数 A(I,J)')
-      WRITE(7,4)
-      DO 13 J=1,IZ
-      READ(4,*)(B(I,J),I=1,20)
-   13 CONTINUE
-      WRITE(7,16)
-      DO 14 J=1,IZ
-      WRITE(7,15)(B(I,J),I=1,20)
-   14 CONTINUE
-   15 FORMAT(10F8.4)
-   16 FORMAT(6X,'导向器环圈结构参数 B(I,J)')
-      WRITE(7,4)
-      DO 60 J=1,IZ
-      READ(4,*)(GKA(I,J),I=1,4)
-   60 CONTINUE
-      WRITE(7,61)
-      DO 62 J=1,IZ
-      WRITE(7,63)(GKA(I,J),I=1,4)
-   62 CONTINUE
-   61 FORMAT(6X,'GKA')
-   63 FORMAT(4F8.4)
-      WRITE(7,4)
-      DO 79 I=1,NV
-      READ(4,*)(AN(I,J),J=1,2)
-   79 CONTINUE
-      WRITE(7,74)
-      DO 70 I=1,NV
-      WRITE(7,73)(AN(I,J),J=1,2)
-   70 CONTINUE
-   74 FORMAT(6X,1HN,7X,1HQ)
-   73 FORMAT(10F8.4)
-      WRITE(7,4)
-      IZ2=IZ+1
-      DO 77 I=1,NV
-      READ(4,*)(TETA(I,J),J=1,IZ2)
-   77 CONTINUE
-      WRITE(7,72)
-      DO 71 I=1,NV
-      WRITE(7,78)(TETA(I,J),J=1,IZ2)
-   71 CONTINUE
-   72 FORMAT(6X,4HTETA)
-   78 FORMAT(10F8.2)
-      WRITE(7,4)
-      ! 添加级间引气参数
-      READ(4,*)(BIS(I),I=1,IZ)
-      GOTO 40
-    3 CONTINUE
-      READ(4,*)OBC,ETCBK,NV
-      WRITE(7,30)OBC,ETCBK,NV
-   30 FORMAT(5X,'NPR=',F8.1,5X,'ETR=',F5.3,5X,'NV=',I2)
-      WRITE(7,4)
-      READ(4,*)D2C,BET2L,ALA3
-      WRITE(7,31)D2C,BET2L,ALA3
-   31 FORMAT(6X,'D2=',F6.4,4X,'BET2L=',F6.2,4X,'LAM3=',F6.4)
-      WRITE(7,4)
-      READ(4,*)(AN(I,1),I=1,NV)
-      WRITE(7,32)
-   32 FORMAT(5X,7HAN(I,1))
-      WRITE(7,73)(AN(I,1),I=1,NV)
-      WRITE(7,4)
-   40 CONTINUE
-      RETURN
       END
       SUBROUTINE SFROMT(T,S)
       T1=T/100.
@@ -2110,241 +1812,6 @@ c子午流道
     3 KRAN(L)=0
       RETURN
       END
-      SUBROUTINE STEPON(M,IQP,IQ,IDQC,INDEXQ,INDEX2,INDEX4,INDEX6,INDEX7
-     *,IPE4,GB,AN,DELTQ,P,QL1,AKPX,QH,QGP,PGP,QQS,QQF,IM,
-     *KM,INDEX8,IND8R,INDEXB,KSTEP,BRANCH,POINTS)
-      DIMENSION GB(10),AN(10,3), BRANCH(10)
-      INTEGER M
- 700  FORMAT(16I5)
- 770  FORMAT(10F12.4)
-      KSTEP=0
-      IF(IQP.EQ.0) GO TO 1        ! IQP = 0
-      IF(IQP.EQ.1) GO TO 41
-      IF(INDEX2.EQ.0) GO TO 42
-      IF(IQP.EQ.3) GO TO 33
-      IF(IQ.EQ.0) IQ=1
-      AN(M,2)=AN(M,2)-ABS(DELTQ)
-      IM=0
-      KM=0
-      INDEX2=0
-      KSTEP=5
-      RETURN
-   42 IF(IQP.EQ.2.AND.IQ.EQ.1) IQP=3
-      IF(IQP.EQ.3) GO TO 45
-      KSTEP=4
-      RETURN
-   45 CONTINUE
-      IF(INDEX7.EQ.1.OR.INDEX6.EQ.1) GO TO 33
-      INDEX4=1
-      IND8R=1
-      AN(M,2)=AN(M,2)+ABS(DELTQ)
-      GO TO 12
-   41 CONTINUE
-      IF(INDEX2.EQ.0) GO TO 2
-      IF(IPE4.EQ.0) GO TO 3
-      WRITE(6,100)
-      WRITE(6,101)
-  100 FORMAT('    确定阻塞工况点')
-  101 FORMAT('    不存在的计算')
-    3 POINTS=1
-    2 KSTEP=3
-      RETURN
-    1 IF(IND8R.EQ.1) GO TO 33
-      IF(IDQC.NE.0.AND.IDQC.LT.IM*INDEX2) GO TO 4
-   50 IF(INDEX4.NE.0.AND.INDEX2.NE.0) GO TO 33
-      IF(INDEX7.EQ.0.AND.INDEX6.EQ.0) GO TO 5
-   33 QH=QH+(0.5-INDEX2)*ABS(DELTQ)*(1-INDEX6)
-      KSTEP=2
-      RETURN
-    5 IF(INDEX4.NE.0) GO TO 7
-      IF(INDEX2.EQ.0) GO TO 8
-      IF(AN(M,2).GT.QQS) GO TO 27
-      IF(IPE4.EQ.0) GO TO 2
-      WRITE(7,104)
-      WRITE(7,105)
-  104 FORMAT('    给定融冰的流量')
-  105 FORMAT('    压气机喘振工作')
-      GO TO 2
-   27 CONTINUE
-      KSTEP=5
-      INDEX2=0
-      GO TO 9
-    8 INDEX4=1
-      IF(QQS.LT.1E-6) GO TO 9
-      DELTQ=ABS(DELTQ)
-      GO TO 11
-    9 QH=AN(M,2)
-      QGP=QH
-      PGP=P
-   10 DELTQ=-ABS(DELTQ)
-   11 AN(M,2)=AN(M,2)+DELTQ
-      IF(AN(M,2).GT.0.) GO TO 26
-      INDEXQ=2
-      AN(M,2)=AN(M,2)+2.*ABS(DELTQ)
-   26 IF(AN(M,2).LT.1) GO TO 25
-      KSTEP=4
-      RETURN
-   25 CONTINUE
-      IF(QQF.LT.1E-6) GO TO 20
-      IF(AN(M,2).GT.QQF) AN(M,2)=QQF
-   20 CONTINUE
-   12 IF(KSTEP.NE.5) KSTEP=1
-      RETURN
-    7 IF(INDEXQ.NE.0) GO TO 21
-      IF(QQS.GT.1E-6) GO TO 11
-      IF(P.LT.PGP) GO TO 13
-   14 PGP=P
-      QGP=AN(M,2)
-      INDEXQ=1
-      GO TO 10
-   13 INDEXQ=2
-   15 DELTQ=ABS(DELTQ)
-      AN(M,2)=QH+DELTQ
-      QH=AN(M,2)
-      GO TO 12
-   21 IF(INDEXQ.EQ.1) GO TO 16
-      IF(P.LT.PGP) GO TO 15
-      PGP=P
-      QGP=AN(M,2)
-      GOTO 15
-   16 IF(P.GE.PGP.AND.INDEXB.NE.4) GO TO 14
-      GO TO 15
-    4 IF(INDEX6.EQ.1) GO TO 33
-      IF(ABS(DELTQ).GT.GB(9)/10.) GO TO 17
-      BRANCH(M)=AN(M,1)
-      IF(IPE4.EQ.0) GO TO 2
-      WRITE(7,102)
-      WRITE(7,103)
-  102 FORMAT('    给定的条件不能工作')
-  103 FORMAT('    失速与喘振同时存在')
-      GO TO 2
-   17 INDEX4=1
-      INDEXQ=2
-      IM=0
-      KM=0
-      INDEXB=0
-      INDEX2=0
-      KSTEP=5
-      QH=AN(M,2)+ABS(DELTQ)
-      IF(INDEX7.NE.0) DELTQ=0.5*ABS(DELTQ)
-      DELTQ=ABS(DELTQ)
-      GO TO 11
-      END
-      ! STEPAT
-      ! 函数说明：未知
-      ! 参数说明：
-      ! --- 1 INDEX2  ???
-      ! --- 2 INDEXB  ???
-      ! --- 3 INDEXD  ???
-      ! --- 4 INDEXQ  ???
-      ! --- 5 INDEX6  ???
-      ! --- 6 INDEX8  ???
-      ! --- 7 IND8R   ???
-      ! --- 8 QQS     ???
-      ! --- 9 QQF     ???
-      ! ---10 E       ???
-      ! ---11 ES      ???
-      ! ---12 QL1     ???
-      ! ---13 P       ???
-      ! ---14 G       流量
-      ! ---15 Q1      ???
-      ! ---16 P1      ???
-      ! ---17 QGP     ???
-      ! ---18 PGP     ???
-      ! ---19 GGP     ???
-      ! ---20 Q2      ???
-      ! ---21 P2      ???
-      ! ---22 DELTQ   ???
-      ! ---23 QMEM    ???
-      ! ---24 DQMEM   ???
-      ! ---25 ZAP     ???
-      ! ---26 IQP     ???
-      ! ---27 KSTEP   步骤控制变量
-      SUBROUTINE STEPAT(INDEX2,INDEXB,INDEXD,INDEXQ,INDEX6,INDEX8,
-     *IND8R,QQS,QQF,E,ES,QL1,P,G,Q1,P1,QGP,PGP,GGP,Q2,P2,DELTQ,
-     *QMEM,DQMEM,ZAP,IQP,KSTEP)
-      KSTEP=0
-      IF(IQP*INDEXB.EQ.12) GOTO 1
-      IO=INDEXB/4*((P+1)/(PGP+1))
-      INDEXB=INDEXB*(1-IO)
-      IF(IQP.GT.0) GOTO 1
-      IF(INDEX6.EQ.1) GO TO 1
-      IF(QQS.GT.1E-8.AND.QQF.GT.1E-8) GO TO 1
-      IF(INDEX2.EQ.1) GO TO 1
-      IF(INDEXB.EQ.4) GO TO 1
-      IF(INDEXB.GE.2) GO TO 2
-      ES=E*0.2
-      IF(INDEX8.GE.1.OR.IND8R.EQ.1) ES=E/10.
-      IF(QL1.LT.QGP) GO TO 3
-      IF(P.LE.PGP) GO TO 4
-      Q1=QGP
-      P1=PGP
-      QGP=QL1
-      PGP=P
-      GGP=G
-      ZAP=P/G
-      GO TO 1
-    4 QMEM=QL1
-      DQMEM=DELTQ
-      Q2=QL1
-      P2=P
-      INDEXB=2
-      INDEXD=2
-      GO TO 2
-    3 IF(P.LE.PGP) GO TO 5
-      Q2=QGP
-      P2=PGP
-      QGP=QL1
-      PGP=P
-      GGP=G
-      ZAP=P/G
-      GO TO 1
-    5 Q1=QL1
-      P1=P
-      IF(INDEXQ.EQ.0) GO TO 1
-      INDEXB=2
-      DQMEM=DELTQ
-      QMEM=QL1
-      GO TO 2
-    1 KSTEP=1
-      RETURN
-    2 IF(INDEXB.NE.3 ) GO TO 6
-      INDEXB=4
-      QL1=QMEM
-      DELTQ=DQMEM
-      GO TO 1
-    6 IF(Q2-Q1.LT.ES) INDEXB=3
-      IF(INDEXD.NE.0) GO TO 7
-      IF(P.LT.PGP) GO TO 8
-      Q2=QGP
-      P2=PGP
-      QGP=QL1
-      PGP=P
-      GGP=G
-      ZAP=P/G
-      GO TO 9
-    8 Q1=QL1
-      P1=P
-    9 IF(Q2-QGP.LT.ES/2.) GO TO 10
-   14 QL1=(Q2+QGP)/2.
-      INDEXD=2
-      GO TO 11
-    7 IF(P.LT.PGP) GO TO 12
-      Q1=QGP
-      P1=PGP
-      QGP=QL1
-      PGP=P
-      GGP=G
-      ZAP=P/G
-      GO TO 13
-   12 Q2=QL1
-      P2=P
-   13 IF(QGP-Q1.LT.ES/2.) GO TO 14
-   10 QL1=(Q1+QGP)/2.
-      INDEXD=0
-   11 KSTEP=2
-      RETURN
-      END
       SUBROUTINE DECOD(COD,K,A,N,B,M)
         DOUBLE PRECISION COD,AI,COD1,A1
         INTEGER*4 I
@@ -2355,102 +1822,6 @@ c子午流道
       A=SNGL(A1)
       AI=AI*10**K
       B=(COD-AI)/10**M
-      RETURN
-      END
-      ! STEPIN
-      ! 函数说明：未知
-      ! 参数说明：
-      ! --- 1 INDEXZ  ???
-      ! --- 2 INDEX2  ???
-      ! --- 3 INDEX6  ???
-      ! --- 4 INDEX9  ???
-      ! --- 5 INDEXB  ???
-      ! --- 6 LSR     ???
-      ! --- 7 IM      ???
-      ! --- 8 KM      ???
-      ! --- 9 IQP     压气机特性线上计算点的符号
-      ! ---10 PR      ???
-      ! ---11 IZAP    ???
-      ! ---12 CU      ???
-      ! ---13 ZAP     ???
-      ! ---14 QL1     流量系数
-      ! ---15 G       流量
-      ! ---16 P       ???
-      ! ---17 DELTQ   ???
-      ! ---18 SIGMA   ???
-      ! ---19 DSIGMA  ???
-      ! ---20 QSET    ???
-      ! ---21 DQSET   ???
-      ! ---22 SISET   ???
-      ! ---23 DSISET  ???
-      ! ---24 SDELTQ  ???
-      ! ---25 WCP     ???
-      ! ---26 EP      ???
-      ! ---27 GUIDE   ???
-      ! ---28 SGUIDE  ???
-      ! ---29 KSTEP   步骤控制变量
-      SUBROUTINE STEPIN(INDEXZ,INDEX2,INDEX6,INDEX9,INDEXB,LSR,IM,KM,IQP
-     *,PR,IZAP,CU,ZAP,QL1,G,P,DELTQ,SIGMA,DSIGMA,QSET,DQSET,SISET,DSISET
-     *,SDELTQ,WCP,EP,GUIDE,SGUIDE,KSTEP)
-      DIMENSION WCP(10,4)
-      KSTEP=0
-      IF(INDEXZ.NE.0) GO TO 1
-	KU=INDEX6+1
-      IF(IQP.GE.2.AND.LSR.EQ.0) GOTO (20,10),KU
-      IF(IZAP.EQ.0.OR.INDEXB.NE.4) GOTO 20
-	PZ=G*ZAP/(1.+CU/100.)
-      IF(LSR.EQ.1) PZ=GWCP(G,WCP)
-   10 IF(IQP.GE.2.AND.LSR.EQ.0) PZ=PR
-      IF(P.GT.PZ) GO TO 20
-      INDEXZ=1
-      IF(INDEX6.NE.0) THEN
-          IM=1000
-          KM=2
-      END IF
-      QSET=QL1
-      DQSET=DELTQ
-      SISET=SIGMA
-      DSISET=DSIGMA
-      SGUIDE=GUIDE
-      IF(SDELTQ.EQ.0) SDELTQ=DELTQ
-      GO TO 30
-    1 IF(INDEXZ.GE.2) GO TO 20
-    3 PZ=G*ZAP/(1.+CU/100.)
-      IF(LSR.EQ.1) PZ=GWCP(G,WCP)
-      IF(IQP.GE.2.AND.LSR.EQ.0) PZ=PR
-   30 CONTINUE
-      IF(INDEX6.EQ.1) GO TO 4
-      IF(ABS(P-PZ).LT.EP.OR.ABS(SDELTQ).LT.1E-6) THEN
-          INDEXZ=2
-          QL1=QSET
-          DELTQ=DQSET
-          GOTO 20
-      END IF
-      SDELTQ=ABS(SDELTQ)/2.
-      IF(P.LT.PZ) SDELTQ=-2*SDELTQ
-      QL1=QL1+SDELTQ
-      KSTEP=3
-      RETURN
-    4 IF(ABS(P-PZ).LT.EP) GO TO 6
-      DSIGMA=ABS(DSIGMA)/2.
-      IF(DSIGMA.LE.1.E-6) GOTO 20
-      IF(P.LT.PZ) DSIGMA=-DSIGMA
-      INDEX9=1
-      KSTEP=2
-      RETURN
-    6 INDEXZ=2
-      SIGMA=SISET
-      DSIGMA=DSISET
-      GUIDE=SGUIDE
-      IF(IQP.EQ.3) THEN
-          KSTEP=4
-          RETURN
-      END IF
-      IM=0
-      KM=0
-      INDEX9=0
-      INDEX2=0
-   20 KSTEP=1
       RETURN
       END
       FUNCTION GWCP(G,WCP)
@@ -3352,6 +2723,7 @@ c子午流道
    66 RETURN
       END
       SUBROUTINE PHCY(HC,HQ,HQC,H)
+      ! 未知 - 处理了压头和压头系数
       COMMON/A21/KRAN(40)
   560 FORMAT('LINE 4732: ULT 560')  !560 FORMAT(14HP H C Y 妿崡厤)
  1357 FORMAT(6F20.6)
@@ -3371,8 +2743,13 @@ c子午流道
       WRITE(7,560)
    66 RETURN
       END
-      ! 效率偏离最佳点修正系数的确定
       SUBROUTINE PKPDOY(HQ,UPR2,AML1,HTO,VTA)
+      ! 效率偏离最佳点修正系数的确定
+      ! ---   HQ      计算点轴向相对速度与最佳轴向相对速度的比值
+      ! ---   UPR2    亚音速叶型取0.1，超音速叶型取2.0
+      ! ---   AML1    转子入口轴向速度系数
+      ! ---   HTO     计算点轴向相对速度
+      ! ---   VTA     计算结果：效率偏离最佳点修正系数
       COMMON/A10/AKH
       COMMON/A2/R1
       IF(HQ-1.0)43,44,44
@@ -3434,7 +2811,7 @@ c子午流道
       SUBROUTINE FGCA(ANT,RE,FGK,FGKA)
       ! 计算转子和静子的气动载荷临界值
       ! ---   ANT     相对换算转速
-      ! ---   RE      相对轮毂比
+      ! ---   RE      雷诺数
       ! ---   FGK     转子气动载荷临界值
       ! ---   FGKA    静子气动载荷临界值
       COMMON/A1/D1
@@ -3575,8 +2952,12 @@ c子午流道
      *PI,PIT,ALFA4,LA4,C4A,II)                   ! 静子出口参数计算
       RETURN
       END
-      ! 根据叶型集合参数对效率修正系数的确定
       SUBROUTINE PKPDK(XFK,XFA,HQ,VTA)
+      ! 根据叶型集合参数对效率修正系数的确定
+      ! ---   XFK     转子叶片最大弯度相对位置
+      ! ---   XFA     静子叶片最大弯度相对位置
+      ! ---   HQ      计算点轴向相对速度与最佳轴向相对速度的比值
+      ! ---   VTA     计算结果：叶型集合参数对效率的修正系数
       COMMON/A21/KRAN(40)
   563 FORMAT('LINE 4946: ULT 563')  !563 FORMAT(16HP K P D K 妿崡厤)
  1357 FORMAT(6F20.6)
@@ -4901,9 +4282,9 @@ c子午流道
       ! - DELT    计算结果：落后角
       ! - BETA2   计算结果：出口相对气流角
     7 CALL DELTAK(RK,GK,J,EK,C2C1,B20,DELTK,BETA2)    ! 转子落后角计算
-      RKI(2)=BETA2
+      RKI(2)=BETA2    ! 转子落后角
       CALL DELTAK(HA,GK,J,EA,C4C2,A40,DELTA,ALFA4)    ! 静子落后角计算
-      HAI(2)=ALFA4
+      HAI(2)=ALFA4    ! 静子落后角
       ! 计算最佳入口攻角：AI0
       ! - RK      级结构参数
       ! - DI      根据具体流动给出的攻角修正值
