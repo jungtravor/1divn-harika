@@ -1,90 +1,83 @@
+# -*- coding: utf-8 -*-
+
 import os
 import re
 import matplotlib.pyplot as plt
 
-# 点大小
-pointSize = 4
 
-# 是否创建单独的图像
-singleFig = 0
+def readContent(fileContent):
+	reading = 0
+	q = []
+	p = []
+	n = []
+	for line in fileContent:
+	    if line.startswith('     characteristic axi. stage'):
+	    	# 开始读取当前流量转速的数据
+	        reading = 1
+	        # 保存当前流量和转速数据
+	        match = re.search(r'.*N =([\d\.]*).*QL =([\d\.]*)', line)
+	        fn = float(match.group(1))
+	        fq = float(match.group(2))
+	        continue
+	    if line.startswith('   NU TEK') and reading == 1:
+	    	# 该流量转速下数据获取完成
+	        continue
+	    if reading > 0:
+	    	# 读取该行数据，依次为流量、压力、转速
+	        if line.startswith('     Q(LQ'):
+	            continue
+	        nums = re.findall(r'[\d\.]+', line)
+	        q.append(float(nums[0]))
+	        p.append(float(nums[1]))
+	        n.append(float(nums[2]))
+	return q, p, n
+
+# 点大小
+pointSize = 2
 
 # 创建文件夹
-if not os.path.exists('figure'):
-    os.mkdir('figure')
+dirName = 'figure_allinone'
+if not os.path.exists(dirName):
+    os.mkdir(dirName)
 
-f = open("Result_utf8-0.05.1D", "r", encoding="utf-8")
-fileContent = f.readlines()
+# 获取结果文件列表
+filelist = [name for name in os.listdir('.')
+            if name.startswith('Result_utf8')]
 
-reading = 0
-q = []
-p = []
-n = []
-index = 1
-fn = 0
-fq = 0
+# 逐一读取文件信息，并在图像上画点
+plt.figure(1, figsize=(19.20, 10.80))
+plt.figure(2, figsize=(19.20, 10.80))
 pl = []
 nl = []
 labels = []
-for line in fileContent:
-    if line.startswith('     characteristic axi. stage'):
-        reading = 1
-        # 保存流量和转速数据
-        match = re.search(r'.*N =([\d\.]*).*QL =([\d\.]*)', line)
-        fn = float(match.group(1))
-        fq = float(match.group(2))
-        continue
-    if line.startswith('   NU TEK') and reading == 1:
-        reading = 0
-        # 创建标签
-        labels.append('Q='+str(fq)+',N='+str(fn))
-        # 创建图像
-        plt.figure(1)
-        pl.append(plt.scatter(q, p, s=pointSize))
-        if singleFig > 0:
-            plt.figure(3)
-            plt.scatter(q, p, s=pointSize)
-            plt.savefig("figure/P" + str(index) + ".png")
-            plt.clf()
-            plt.close()
-        
-        plt.figure(2)
-        nl.append(plt.scatter(q, n, s=pointSize))
-        if singleFig > 0:
-            plt.figure(3)
-            plt.scatter(q, n, s=pointSize)
-            plt.savefig("figure/N" + str(index) + ".png")
-            plt.clf()
-            plt.close()
+for filename in filelist:
+	q = []
+	p = []
+	n = []
+	# 读取文件
+	with open(filename, "r", encoding="utf-8") as f:
+		detail = re.search(r'Result_utf8-(.*)\.1D', filename).group(1)
+		fileContent = f.readlines()
+		(q, p, n) = readContent(fileContent)
 
-        # 保存
-        # 清除临时数据
-        q = []
-        p = []
-        n = []
-        # 递增
-        index = index + 1
-        continue
-    if reading > 0:
-        if line.startswith('     Q(LQ'):
-            continue
-        nums = re.findall(r'[\d\.]+', line)
-        q.append(float(nums[0]))
-        p.append(float(nums[1]))
-        n.append(float(nums[2]))
+	plt.figure(1)
+	pl.append(plt.scatter(q, p, s=pointSize))
+	plt.figure(2)
+	nl.append(plt.scatter(q, n, s=pointSize))
+	labels.append(detail)
 
-
-
+# 处理坐标轴、系列等数据
 plt.figure(1)
 plt.xlabel('Q')
 plt.ylabel('P')
 plt.legend(handles=pl, labels=labels, loc='best')
-plt.savefig("figure/P.png")
+plt.savefig(dirName + "/P.png")
 plt.close()
 plt.figure(2)
 plt.xlabel('Q')
 plt.ylabel('N')
 plt.legend(handles=nl, labels=labels, loc='best')
-plt.savefig("figure/N.png")
+plt.savefig(dirName + "/N.png")
 plt.close()
 
-print(str(index-1) + ' figures successfully')
+print('figures saved successfully')
